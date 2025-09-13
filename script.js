@@ -265,7 +265,7 @@
   
     // Basic global answer (placeholder simulation)
     function generateGlobalAnswer(q){
-      return `Global answer (simulated):\n\nQ: ${q}\n\nLejend, this is a simulated global explanation — connect a backend to use real APIs. Meanwhile, try switching to "All Notes" or "Subject Specific" mode to answer from your uploaded notes.`;
+      return `Global answer (simulated):\n\nQ: ${q}\n\nSachin, this is a simulated global explanation — connect a backend to use real APIs. Meanwhile, try switching to "All Notes" or "Subject Specific" mode to answer from your uploaded notes.`;
     }
   
     // Generate answer using uploaded notes (very simple heuristics)

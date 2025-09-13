@@ -17,15 +17,29 @@ const genAI = new GoogleGenerativeAI(process.env.API_KEY);
 // Define the API endpoint for the chat
 app.post('/api/chat', async (req, res) => {
     try {
-        const { prompt } = req.body;
+        const { prompt, mode } = req.body; // Added 'mode' here
         
         // Ensure prompt is provided
         if (!prompt) {
             return res.status(400).json({ error: 'Prompt is required' });
         }
 
+        let fullPrompt;
+        if (mode === 'notes') { // This logic handles both 'all' and 'subject' modes
+            // This is the new, improved prompt template
+            fullPrompt = `You are a study assistant. Use ONLY the provided notes to answer the question. If the information is not in the notes, respond with "I couldn't find the answer in your notes." Do not make up information.
+            
+            Notes:
+            ${req.body.notesContent}
+            
+            Question: ${prompt}`;
+        } else { // global mode
+            // This is the prompt for the global mode
+            fullPrompt = prompt;
+        }
+
         const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(fullPrompt);
         const response = await result.response;
         const text = response.text();
 

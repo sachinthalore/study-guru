@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Study Guru — AI Study Platform (Frontend)</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="nav card" role="navigation" aria-label="Main navigation">
+      <div class="logo">
+        <div class="mark">SG</div>
+        <div>
+          <div style="font-size:15px">Study Guru</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">Your AI Study Companion</div>
+        </div>
+      </div>
+      <div class="menu" id="navMenu">
+        <a href="#" class="active" data-page="home">Home</a>
+        <a href="#" data-page="notes">Notes</a>
+        <a href="#" data-page="chat">Chat</a>
+        <a href="#" data-page="test">Test</a>
+        <a href="#" data-page="profile">Profile</a>
+      </div>
+    </div>
+
+    <div class="main">
+      <section class="card pages" id="page-home">
+        <div class="hero">
+          <div class="hero-left">
+            <div class="tag">Sachin — Your AI Study Guru</div>
+            <h1 class="h1">Your AI Study Guru — Focused study, smarter notes, instant tests.</h1>
+            <p class="lead">Chat with global knowledge or with only your uploaded notes. Create quick keywords, short notes and tests — all from your materials.</p>
+            <a class="btn" id="heroGetStarted">Get Started</a>
+          </div>
+          <div style="min-width:260px;display:flex;flex-direction:column;gap:12px;align-items:flex-end;">
+            <div style="background:linear-gradient(180deg,#FFFFFF,#F6FBFF);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.04);text-align:right;">
+              <div style="font-size:12px;color:var(--muted)">Progress</div>
+              <div style="font-weight:800;font-size:20px">Start by uploading notes</div>
+              <div style="margin-top:10px">Upload TXT or PDF (TXT parsed client-side; PDF stored as file placeholder).</div>
+            </div>
+            <div style="font-size:12px;color:var(--muted)">Tip: Use Subject folders to keep study focused.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card pages hide" id="page-notes">
+        <h3>Notes</h3>
+        <div style="margin-top:12px" class="upload">
+          <div class="drop" id="dropZone">
+            <div>
+              <div style="font-weight:700;margin-bottom:6px">Drag & Drop your notes here</div>
+              <div style="color:var(--muted);font-size:13px">Supports .txt and .pdf (txt is parsed for generating keywords & tests)</div>
+              <div style="margin-top:10px">
+                <input type="file" id="fileInput" style="display:none" />
+                <button class="smallbtn" id="pickFile">Choose File</button>
+              </div>
+              <div style="margin-top:12px">
+                <label for="subjectSelect" style="font-size:13px;color:var(--muted);margin-right:8px">Subject:</label>
+                <select id="subjectSelect" style="padding:8px;border-radius:8px;border:1px solid #E6E9EE;">
+                  <option>Computer</option><option>Science</option><option>Math</option><option>Other</option>
+                </select>
+                <button class="smallbtn" id="createSubject" style="margin-left:8px;background:var(--accent-2)">New Folder</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="notes-list">
+            <h4 style="margin:0 0 10px 0">Uploaded Notes</h4>
+            <div id="notesContainer" style="min-height:160px"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card pages hide" id="page-chat">
+        <h3>Chat</h3>
+        <div style="margin-top:10px">
+          <div class="tabs" role="tablist" aria-label="Chat modes">
+            <div class="tab active" data-mode="global">🌍 Global</div>
+            <div class="tab" data-mode="all">📒 All Notes</div>
+            <div class="tab" data-mode="subject">📂 Subject Specific</div>
+          </div>
+
+          <div id="subjectChooser" style="margin-bottom:12px;display:none;">
+            <label style="font-size:13px;color:var(--muted);margin-right:8px">Choose subject:</label>
+            <select id="chatSubject" style="padding:8px;border-radius:8px;border:1px solid #E6E9EE;"></select>
+          </div>
+
+          <div class="chat-wrap">
+            <div class="messages" id="messages"></div>
+
+            <div class="chat-input">
+              <input id="chatInput" placeholder="Ask Study Guru..." />
+              <button class="sendbtn" id="sendBtn">Send</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card pages hide" id="page-test">
+        <h3>Test Generator</h3>
+        <div class="test-options">
+          <label style="font-size:13px;color:var(--muted)">Mode:</label>
+          <select id="testMode" style="padding:8px;border-radius:8px;border:1px solid #E6E9EE;">
+            <option value="all">All Subjects Test</option>
+            <option value="single">Single Subject Test</option>
+          </select>
+          <select id="testSubject" style="padding:8px;border-radius:8px;border:1px solid #E6E9EE;">
+          </select>
+          <label style="font-size:13px;color:var(--muted)">Type:</label>
+          <select id="qType" style="padding:8px;border-radius:8px;border:1px solid #E6E9EE;">
+            <option value="mcq">MCQ</option>
+            <option value="short">Short Answer</option>
+          </select>
+          <button class="smallbtn" id="genTest">Generate Test</button>
+        </div>
+
+        <div id="testArea"></div>
+      </section>
+
+      <section class="card pages hide" id="page-profile">
+        <h3>Profile</h3>
+        <div style="margin-top:12px" class="profile-grid">
+          <div>
+            <h4>Subjects & Notes</h4>
+            <div id="profileSubjects" style="margin-top:8px"></div>
+          </div>
+          <div>
+            <h4>Progress</h4>
+            <div style="margin-top:10px;padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#FBFCFF);">
+              <div style="font-size:13px;color:var(--muted)">Overall Completion</div>
+              <div style="margin-top:8px" class="progress"><i id="progressBar"></i></div>
+              <div style="margin-top:12px;color:var(--muted)" id="progressText">0% complete</div>
+              <div style="margin-top:14px">
+                <button class="smallbtn" id="exportNotes">Export Notes (JSON)</button>
+              </div>
+            </div>
+            <div style="margin-top:12px">
+              <h4>Utilities</h4>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="smallbtn" id="genKeywordsAll">Generate Keywords (All)</button>
+                <button class="smallbtn" id="shortNotesAll" style="background:var(--accent-2)">Make Short Notes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Notification</div>
+
+<script src="script.js"></script>
+</body>
+</html>

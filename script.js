@@ -243,8 +243,10 @@ const App = (function(){
     // Determine the prompt based on chat mode
     let prompt;
     let mode;
+    let notesContent = "";
+    
     if (state.chatMode === 'all') {
-        const notesContent = state.notes.filter(n => n.type === 'txt' && n.content).map(n => n.content).join('\n\n');
+        notesContent = state.notes.filter(n => n.type === 'txt' && n.content).map(n => n.content).join('\n\n');
         if (!notesContent) {
             if (loaderMsg) loaderMsg.remove();
             appendMessage('No TXT notes found. Upload TXT files to enable notes-powered answers.', 'ai');
@@ -254,7 +256,7 @@ const App = (function(){
         mode = 'notes';
     } else if (state.chatMode === 'subject') {
         const subj = chatSubject.value;
-        const notesContent = state.notes.filter(n => n.subject === subj && n.type === 'txt' && n.content).map(n => n.content).join('\n\n');
+        notesContent = state.notes.filter(n => n.subject === subj && n.type === 'txt' && n.content).map(n => n.content).join('\n\n');
         if (!notesContent) {
             if (loaderMsg) loaderMsg.remove();
             appendMessage(`No TXT notes found for subject "${subj}".`, 'ai');
@@ -275,7 +277,7 @@ const App = (function(){
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ prompt, mode }),
+                body: JSON.stringify({ prompt, mode, notesContent }),
             });
 
             if (!response.ok) throw new Error("Network response was not ok");
@@ -317,6 +319,7 @@ const App = (function(){
     
     // Function ko call karna
     fetchStream();
+  }
 
   function appendMessage(text, who='ai', isLoader=false){
     const d = document.createElement('div');

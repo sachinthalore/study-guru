@@ -112,6 +112,12 @@ ${prompt}
 });
 
 // ---------------- Start Server ----------------
-app.listen(PORT, () => {
-  console.log(`✅ Server is successfully running on http://localhost:${PORT}`);
-});
+// Local testing ke liye aap isko uncomment kar sakte hain, par Vercel ke liye iski zaroorat nahi hai
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`✅ Server is successfully running on http://localhost:${PORT}`);
+  });
+}
+
+// Vercel serverless deployment ke liye Express app ko export karna zaroori hai
+export default app;

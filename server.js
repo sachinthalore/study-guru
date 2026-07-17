@@ -55,18 +55,15 @@ app.get("/", (req, res) => {
 });
 
 // ---------------- Chat Route ----------------
+// ---------------- Chat Route (Updated for Streaming) ----------------
 app.post("/api/chat", async (req, res) => {
-  console.log("POST request received");
-  console.log("Request Body:", req.body);
+  console.log("POST request received for streaming");
 
   try {
     const validation = promptSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("Validation Failed:", validation.error);
-      return res.status(400).json({
-        error: validation.error,
-      });
+      return res.status(400).json({ error: validation.error });
     }
 
     const { prompt, mode } = validation.data;
@@ -87,30 +84,34 @@ ${prompt}
 `;
     }
 
-    // Model name set to standard 1.5 flash
-    const model = genAI.getGenerativeModel({
-      model: "gemini-flash-latest",
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-    console.log("Sending request to Gemini API...");
-    const result = await model.generateContent(finalPrompt);
-    const response = await result.response;
-    const text = response.text();
+    // 1. Headers set karein taaki browser ko pata chale ki data stream ho raha hai
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
 
-    console.log("Reply received from Gemini!");
-    res.json({
-      message: text,
-    });
+    // 2. generateContent ki jagah generateContentStream use karein
+    const result = await model.generateContentStream(finalPrompt);
+
+    // 3. Jaise-jaise AI text sochega, waise-waise hum frontend ko bhejenge
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      res.write(chunkText); 
+    }
+
+    // 4. Jab pura answer khatam ho jaye, toh connection close kar dein
+    res.end();
 
   } catch (err) {
-    console.error("❌ SERVER ERROR in Gemini API:");
-    console.error(err);
-    res.status(500).json({
-      error: "Error generating response from AI. Please check terminal for details.",
-    });
+    console.error("❌ SERVER ERROR in Gemini API:", err);
+    // Error aane par connection close karna zaroori hai
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Error generating response from AI." });
+    } else {
+      res.end("\n\n[Error: Connection interrupted]");
+    }
   }
 });
-
 // ---------------- Start Server ----------------
 // Local testing ke liye aap isko uncomment kar sakte hain, par Vercel ke liye iski zaroorat nahi hai
 if (process.env.NODE_ENV !== 'production') {

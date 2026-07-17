@@ -35,9 +35,11 @@ app.use(
 );
 
 // ---------------- Validation ----------------
+// Naya change: notesContent ko bhi validation mein add kar diya gaya hai
 const promptSchema = z.object({
   prompt: z.string().min(1).max(5000),
   mode: z.string(),
+  notesContent: z.string().optional(), 
 });
 
 // ---------------- Gemini Setup ----------------
@@ -54,22 +56,24 @@ app.get("/", (req, res) => {
   res.send("Backend Working Perfectly!");
 });
 
-// ---------------- Chat Route ----------------
-// ---------------- Chat Route (Updated for Streaming) ----------------
+// ---------------- Chat Route (Streaming Enabled) ----------------
 app.post("/api/chat", async (req, res) => {
   console.log("POST request received for streaming");
-
+  
   try {
     const validation = promptSchema.safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(400).json({ error: validation.error });
+      console.log("Validation Failed:", validation.error);
+      return res.status(400).json({
+        error: validation.error,
+      });
     }
 
-    const { prompt, mode } = validation.data;
+    const { prompt, mode, notesContent } = validation.data;
     let finalPrompt = prompt;
 
-    if (mode === "notes" && req.body.notesContent) {
+    if (mode === "notes" && notesContent) {
       finalPrompt = `
 You are an AI Study Assistant.
 Use ONLY the notes below.
@@ -77,48 +81,59 @@ If the answer is not found, reply exactly:
 "I couldn't find the answer in your notes."
 
 Notes:
-${req.body.notesContent}
+${notesContent}
 
 Question:
 ${prompt}
 `;
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    // Model name set to standard 1.5 flash
+    const model = genAI.getGenerativeModel({
+      model: "gemini-flash-latest",
+    });
 
-    // 1. Headers set karein taaki browser ko pata chale ki data stream ho raha hai
+    console.log("Sending request to Gemini API for Streaming...");
+    
+    // 1. Headers set karein taaki stream chalu ho sake
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
 
-    // 2. generateContent ki jagah generateContentStream use karein
+    // 2. Stream generation start karein
     const result = await model.generateContentStream(finalPrompt);
 
-    // 3. Jaise-jaise AI text sochega, waise-waise hum frontend ko bhejenge
+    // 3. Jaise-jaise AI sochega, chunks mein data frontend par jayega
     for await (const chunk of result.stream) {
       const chunkText = chunk.text();
       res.write(chunkText); 
     }
 
-    // 4. Jab pura answer khatam ho jaye, toh connection close kar dein
+    // 4. Response poora hone par connection close karein
     res.end();
+    console.log("Stream successfully completed!");
 
   } catch (err) {
-    console.error("❌ SERVER ERROR in Gemini API:", err);
-    // Error aane par connection close karna zaroori hai
+    console.error("❌ SERVER ERROR in Gemini API:");
+    console.error(err);
+    
+    // Error handling
     if (!res.headersSent) {
-      res.status(500).json({ error: "Error generating response from AI." });
+      res.status(500).json({
+        error: "Error generating response from AI. Please check terminal for details.",
+      });
     } else {
       res.end("\n\n[Error: Connection interrupted]");
     }
   }
 });
-// ---------------- Start Server ----------------
-// Local testing ke liye aap isko uncomment kar sakte hain, par Vercel ke liye iski zaroorat nahi hai
+
+// ---------------- Start Server / Vercel Export ----------------
+// Local testing ke liye
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`✅ Server is successfully running on http://localhost:${PORT}`);
   });
 }
 
-// Vercel serverless deployment ke liye Express app ko export karna zaroori hai
+// Vercel deployment ke liye
 export default app;

@@ -267,30 +267,56 @@ const App = (function(){
         mode = 'global';
     }
 
-    // Send the prompt to the backend server
-    fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt, mode }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(loaderMsg) loaderMsg.remove();
-        if(data.message) {
-            appendMessage(data.message, 'ai');
-        } else {
-            appendMessage('Sorry, something went wrong. Please check the Vercel logs.', 'ai');
+    // Send the prompt to the backend server (Updated for Real-Time Streaming)
+    async function fetchStream() {
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt, mode }),
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            // 1. Jaise hi connection ban jaye, loading animation hata do
+            if (loaderMsg) loaderMsg.remove();
+
+            // 2. Chat UI mein ek naya khali message box banao jismein AI type karega
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'msg ai';
+            messagesEl.appendChild(msgDiv);
+
+            // 3. Backend se aane wale data stream ko padhne ke liye setup
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let completeResponse = "";
+
+            // 4. Loop tab tak chalega jab tak AI poora answer nahi de deta
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                // Naye word/chunk ko decode karke judna
+                const chunk = decoder.decode(value, { stream: true });
+                completeResponse += chunk;
+
+                // Real-time UI update karna (line breaks ke sath)
+                msgDiv.innerHTML = escapeHtml(completeResponse).replace(/\n/g, '<br/>');
+                
+                // Scroll ko hamesha neeche rakhna
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+        } catch (error) {
+            if (loaderMsg) loaderMsg.remove();
+            console.error('Fetch error:', error);
+            appendMessage('Sorry, an error occurred while connecting to the server. Please check your network and Vercel logs.', 'ai');
         }
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-    })
-    .catch(error => {
-        if(loaderMsg) loaderMsg.remove();
-        console.error('Fetch error:', error);
-        appendMessage('Sorry, an error occurred while connecting to the server. Please check your network and Vercel logs.', 'ai');
-    });
-}
+    }
+    
+    // Function ko call karna
+    fetchStream();
 
   function appendMessage(text, who='ai', isLoader=false){
     const d = document.createElement('div');

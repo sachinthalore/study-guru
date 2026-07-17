@@ -1,57 +1,117 @@
-import express from 'express';
-import cors from 'cors';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import 'dotenv/config';
+import "dotenv/config"; // Isko sabse upar rakhna best practice hai
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { z } from "zod";
 
-// Initialize the Express app
+console.log("SERVER FILE LOADED");
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Middleware for parsing JSON bodies and enabling CORS
+// ---------------- Middleware ----------------
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "http://localhost:3000",
+    "https://study-guru-pi.vercel.app"
+  ],
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+  })
+);
 
-// Initialize Google Generative AI
-const genAI = new GoogleGenerativeAI(process.env.API_KEY);
-
-// Define the API endpoint for the chat
-app.post('/api/chat', async (req, res) => {
-    try {
-        const { prompt, mode } = req.body; // Added 'mode' here
-        
-        // Ensure prompt is provided
-        if (!prompt) {
-            return res.status(400).json({ error: 'Prompt is required' });
-        }
-
-        let fullPrompt;
-        if (mode === 'notes') { // This logic handles both 'all' and 'subject' modes
-            // This is the new, improved prompt template
-            fullPrompt = `You are a study assistant. Use ONLY the provided notes to answer the question. If the information is not in the notes, respond with "I couldn't find the answer in your notes." Do not make up information.
-            
-            Notes:
-            ${req.body.notesContent}
-            
-            Question: ${prompt}`;
-        } else { // global mode
-            // This is the prompt for the global mode
-            fullPrompt = prompt;
-        }
-
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        const text = response.text();
-
-        // Send the AI's response back to the frontend
-        res.json({ message: text });
-    } catch (error) {
-        console.error('Error generating content:', error);
-        res.status(500).json({ error: 'An error occurred while generating content.' });
-    }
+// ---------------- Validation ----------------
+const promptSchema = z.object({
+  prompt: z.string().min(1).max(5000),
+  mode: z.string(),
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is listening at http://localhost:${port}`);
+// ---------------- Gemini Setup ----------------
+if (!process.env.API_KEY) {
+  console.error("❌ API_KEY not found in .env file!");
+  process.exit(1);
+}
+
+const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+
+// ---------------- Health Route ----------------
+app.get("/", (req, res) => {
+  console.log("GET / route hit");
+  res.send("Backend Working Perfectly!");
+});
+
+// ---------------- Chat Route ----------------
+app.post("/api/chat", async (req, res) => {
+  console.log("POST request received");
+  console.log("Request Body:", req.body);
+
+  try {
+    const validation = promptSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      console.log("Validation Failed:", validation.error);
+      return res.status(400).json({
+        error: validation.error,
+      });
+    }
+
+    const { prompt, mode } = validation.data;
+    let finalPrompt = prompt;
+
+    if (mode === "notes" && req.body.notesContent) {
+      finalPrompt = `
+You are an AI Study Assistant.
+Use ONLY the notes below.
+If the answer is not found, reply exactly:
+"I couldn't find the answer in your notes."
+
+Notes:
+${req.body.notesContent}
+
+Question:
+${prompt}
+`;
+    }
+
+    // Model name set to standard 1.5 flash
+    const model = genAI.getGenerativeModel({
+      model: "gemini-flash-latest",
+    });
+
+    console.log("Sending request to Gemini API...");
+    const result = await model.generateContent(finalPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    console.log("Reply received from Gemini!");
+    res.json({
+      message: text,
+    });
+
+  } catch (err) {
+    console.error("❌ SERVER ERROR in Gemini API:");
+    console.error(err);
+    res.status(500).json({
+      error: "Error generating response from AI. Please check terminal for details.",
+    });
+  }
+});
+
+// ---------------- Start Server ----------------
+app.listen(PORT, () => {
+  console.log(`✅ Server is successfully running on http://localhost:${PORT}`);
 });

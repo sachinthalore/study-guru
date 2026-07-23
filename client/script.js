@@ -268,7 +268,7 @@ const App = (function(){
     }
 
     // Send the prompt to the backend server
-    fetch('/api/chat', {
+    fetch('http://localhost:3000/api/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

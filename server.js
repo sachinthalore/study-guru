@@ -1,9 +1,11 @@
 import "dotenv/config"; // Isko sabse upar rakhna best practice hai
 import app from "./server/app.js";
 
-console.log("SERVER FILE LOADED");
+import logger from "./server/config/logger.js";
+import env from "./server/config/env.js";
+logger.info("SERVER FILE LOADED");
 
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 
 // ---------------- Health Route ----------------
 app.get("/", (req, res) => {
@@ -13,5 +15,5 @@ app.get("/", (req, res) => {
 
 // ---------------- Start Server ----------------
 app.listen(PORT, () => {
-  console.log(`✅ Server is successfully running on http://localhost:${PORT}`);
+  logger.info(`Server is running on http://localhost:${PORT}`);
 });

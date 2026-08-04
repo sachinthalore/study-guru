@@ -2,44 +2,93 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import chatRoutes from "./routes/chat.routes.js";
+import chatRoutes from "./routes/v1/chat.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import morgan from "morgan";
+import logger from "./config/logger.js";
+import compression from "compression";
+import env from "./config/env.js";
+import healthRoutes from "./routes/health.routes.js";
 
 const app = express();
 
 // ---------------- Middleware ----------------
 
 app.use(express.json());
-app.use(errorHandler);
-
+app.use(compression());
+app.use(
+  morgan("combined", {
+    stream: {
+      write: (message) => logger.info(message.trim()),
+    },
+  })
+);
 
 app.use(cors({
-  origin: [
-    "http://127.0.0.1:5500",
-    "http://localhost:5500",
-    "http://localhost:3000",
-    "https://study-guru-pi.vercel.app"
-  ],
+  origin: env.CLIENT_ORIGINS,
   methods: ["GET", "POST"],
   credentials: true
 }));
-app.use(errorHandler);
 
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
+
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'"
+        ],
+
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'"
+        ],
+
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:"
+        ],
+
+        connectSrc: [
+          "'self'",
+          "http://localhost:3000",
+          "https://study-guru-pi.vercel.app"
+        ],
+
+        objectSrc: ["'none'"],
+
+        upgradeInsecureRequests: [],
+      },
+    },
+
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin",
+    },
   })
 );
-app.use(errorHandler);
+
 app.use(
   rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: env.RATE_LIMIT_WINDOW,
+max: env.RATE_LIMIT_MAX,
   })
 );
-app.use(errorHandler);
 
-app.use("/api", chatRoutes);
+app.use("/health", healthRoutes); 
+app.use("/api/v1", chatRoutes);
+
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
+});
+
 app.use(errorHandler);
 
 export default app;

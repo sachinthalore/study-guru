@@ -243,46 +243,64 @@ const App = (function(){
     // Determine the prompt based on chat mode
     let prompt;
     let mode;
-    if (state.chatMode === 'all') {
-        const notesContent = state.notes.filter(n => n.type === 'txt' && n.content).map(n => n.content).join('\n\n');
-        if (!notesContent) {
-            if (loaderMsg) loaderMsg.remove();
-            appendMessage('No TXT notes found. Upload TXT files to enable notes-powered answers.', 'ai');
-            return;
-        }
-        prompt = `Based on the following notes, answer the question: "${q}".\n\nNotes:\n${notesContent}`;
-        mode = 'notes';
-    } else if (state.chatMode === 'subject') {
-        const subj = chatSubject.value;
-        const notesContent = state.notes.filter(n => n.subject === subj && n.type === 'txt' && n.content).map(n => n.content).join('\n\n');
-        if (!notesContent) {
-            if (loaderMsg) loaderMsg.remove();
-            appendMessage(`No TXT notes found for subject "${subj}".`, 'ai');
-            return;
-        }
-        prompt = `Based on the following notes for the subject "${subj}", answer the question: "${q}".\n\nNotes:\n${notesContent}`;
-        mode = 'notes';
-    } else { // global mode
+    let notesContent = "";
+    if (state.chatMode === "all") {
+
+      notesContent = state.notes
+          .filter(n => n.type === "txt" && n.content)
+          .map(n => n.content)
+          .join("\n\n");
+  
+      if (!notesContent) {
+          if (loaderMsg) loaderMsg.remove();
+          appendMessage("No TXT notes found. Upload TXT files first.", "ai");
+          return;
+      }
+  
+      prompt = q;
+      mode = "notes";
+  }else if (state.chatMode === "subject") {
+
+    const subj = chatSubject.value;
+
+    notesContent = state.notes
+        .filter(n => n.subject === subj && n.type === "txt" && n.content)
+        .map(n => n.content)
+        .join("\n\n");
+
+    if (!notesContent) {
+        if (loaderMsg) loaderMsg.remove();
+        appendMessage(`No TXT notes found for "${subj}".`, "ai");
+        return;
+    }
+
+    prompt = q;
+    mode = "notes";
+}else { // global mode
         prompt = q;
         mode = 'global';
     }
 
     // Send the prompt to the backend server
-    fetch('http://localhost:3000/api/chat', {
+    fetch('http://localhost:3000/api/v1/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt, mode }),
+        body: JSON.stringify({
+          prompt,
+          mode,
+          notesContent
+      }),
     })
     .then(response => response.json())
     .then(data => {
         if(loaderMsg) loaderMsg.remove();
-        if(data.message) {
-            appendMessage(data.message, 'ai');
-        } else {
-            appendMessage('Sorry, something went wrong. Please check the Vercel logs.', 'ai');
-        }
+        if (data.success) {
+          appendMessage(data.data.reply, "ai");
+      } else {
+          appendMessage(data.message || "Sorry, something went wrong.", "ai");
+      }
         messagesEl.scrollTop = messagesEl.scrollHeight;
     })
     .catch(error => {

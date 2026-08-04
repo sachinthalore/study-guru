@@ -3,6 +3,7 @@ import { z } from "zod";
 const promptSchema = z.object({
   prompt: z.string().min(1).max(1000),
   mode: z.string().optional(),
+  notesContent: z.string().optional()
 });
 
 export const validatePrompt = (req, res, next) => {

@@ -13,19 +13,8 @@ const logger = winston.createLogger({
   ),
 
   transports: [
-    // Console me logs dikhayega
+    // Sirf console logs
     new winston.transports.Console(),
-
-    // Saare logs save honge
-    new winston.transports.File({
-      filename: "logs/combined.log",
-    }),
-
-    // Sirf errors save honge
-    new winston.transports.File({
-      filename: "logs/error.log",
-      level: "error",
-    }),
   ],
 });
 

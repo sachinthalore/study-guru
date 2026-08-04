@@ -81,12 +81,7 @@ max: env.RATE_LIMIT_MAX,
 
 app.use("/health", healthRoutes); 
 
-app.get("/api/v1/chat", (req, res) => {
-  res.json({
-    success: true,
-    message: "GET Chat Route Working",
-  });
-});
+
 
 app.use("/api/v1", chatRoutes);
 

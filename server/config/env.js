@@ -13,6 +13,8 @@ const env = {
 
   REFRESH_TOKEN_EXPIRES: process.env.REFRESH_TOKEN_EXPIRES,
 
+  NODE_ENV: process.env.NODE_ENV || "development",
+  
   CLIENT_ORIGINS: [
     "http://127.0.0.1:5500",
     "http://localhost:5500",

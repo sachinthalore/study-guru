@@ -11,6 +11,8 @@ import env from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import cookieParser from "cookie-parser";
+import tokenRoutes from "./routes/token.routes.js";
+
 const app = express();
 
 // ---------------- Middleware ----------------
@@ -88,6 +90,8 @@ app.use("/health", healthRoutes);
 app.use("/api/v1", chatRoutes);
 
 app.use("/api/v1/auth", authRoutes);
+
+app.use("/api/v1/token", tokenRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({

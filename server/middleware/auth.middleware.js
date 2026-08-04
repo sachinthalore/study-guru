@@ -1,8 +1,8 @@
-import jwt from "jsonwebtoken";
+import { verifyAccessToken } from "../utils/jwt.js";
 import User from "../models/user.model.js";
 import ApiError from "../utils/apiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import env from "../config/env.js";
+
 
 export const authenticate = asyncHandler(async (req, res, next) => {
   let token;
@@ -19,7 +19,7 @@ export const authenticate = asyncHandler(async (req, res, next) => {
   }
 
   // Verify JWT
-  const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+  const decoded = verifyAccessToken(token);
 
   // Get current user
   const user = await User.findById(decoded.id).select("-password -refreshToken");

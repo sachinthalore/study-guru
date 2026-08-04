@@ -4,6 +4,7 @@ import {
     generateAccessToken,
     generateRefreshToken,
   } from "../utils/jwt.js";
+  import { hashToken } from "../utils/token.js";
   
 export const registerUser = async ({ fullName, email, password }) => {
   // Check if email already exists
@@ -45,7 +46,7 @@ export const loginUser = async ({ email, password }) => {
       id: user._id,
     });
   
-    user.refreshToken = refreshToken;
+    user.refreshToken = hashToken(refreshToken);
     user.lastLogin = new Date();
   
     await user.save();

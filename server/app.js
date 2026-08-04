@@ -10,11 +10,13 @@ import compression from "compression";
 import env from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import cookieParser from "cookie-parser";
 const app = express();
 
 // ---------------- Middleware ----------------
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(compression());
 app.use(
   morgan("combined", {

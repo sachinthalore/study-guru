@@ -282,7 +282,12 @@ const App = (function(){
     }
 
     // Send the prompt to the backend server
-    fetch('http://localhost:3000/api/v1/chat', {
+    const API_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:3000"
+    : "";
+
+fetch(`${API_URL}/api/v1/chat`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

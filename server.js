@@ -1,6 +1,6 @@
 import "dotenv/config"; // Isko sabse upar rakhna best practice hai
 import app from "./server/app.js";
-
+import connectDB from "./server/config/db.js";
 import logger from "./server/config/logger.js";
 import env from "./server/config/env.js";
 logger.info("SERVER FILE LOADED");
@@ -12,6 +12,8 @@ app.get("/", (req, res) => {
   console.log("GET / route hit");
   res.send("Backend Working Perfectly!");
 });
+
+await connectDB();
 
 // ---------------- Start Server ----------------
 app.listen(PORT, () => {

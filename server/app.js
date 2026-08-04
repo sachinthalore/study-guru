@@ -9,7 +9,7 @@ import logger from "./config/logger.js";
 import compression from "compression";
 import env from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
-
+import authRoutes from "./routes/auth.routes.js";
 const app = express();
 
 // ---------------- Middleware ----------------
@@ -84,6 +84,8 @@ app.use("/health", healthRoutes);
 
 
 app.use("/api/v1", chatRoutes);
+
+app.use("/api/v1/auth", authRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({

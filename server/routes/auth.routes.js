@@ -5,7 +5,12 @@ import {
   logout,
   forgotPasswordController,
   resetPasswordController,
+  sendVerificationEmailController,
+  verifyEmailController,
+  changePasswordController,
 } from "../controllers/auth.controller.js";
+
+import { validateChangePassword } from "../validators/changePassword.validator.js";
 
 import { validateResetPassword } from "../validators/resetPassword.validator.js";
 import { validateForgotPassword } from "../validators/password.validator.js";
@@ -17,11 +22,7 @@ import {
     authenticate,
     authorize,
   } from "../middleware/auth.middleware.js";
-  import {
-    sendVerificationEmailController,
-    verifyEmailController,
-  } from "../controllers/auth.controller.js";
-
+  
 const router = Router();
 
 router.post("/register", validateRegister, register);
@@ -56,7 +57,14 @@ router.get(
   "/verify-email/:token",
   verifyEmailController
 );
-export default router;
+
+router.patch(
+  "/change-password",
+  authenticate,
+  validateChangePassword,
+  changePasswordController
+);
+
 
 router.get("/me", authenticate, (req, res) => {
     res.json({
@@ -76,3 +84,5 @@ router.get("/me", authenticate, (req, res) => {
       });
     }
   );
+
+  export default router;

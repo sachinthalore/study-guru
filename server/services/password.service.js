@@ -73,3 +73,30 @@ export const resetPassword = async (token, newPassword) => {
   
     await user.save();
   };
+
+  export const changePassword = async (
+    userId,
+    currentPassword,
+    newPassword
+  ) => {
+    const user = await User.findById(userId).select(
+      "+password +refreshToken"
+    );
+  
+    if (!user) {
+      throw new ApiError(404, "User not found.");
+    }
+  
+    const isMatch = await user.comparePassword(currentPassword);
+  
+    if (!isMatch) {
+      throw new ApiError(400, "Current password is incorrect.");
+    }
+  
+    user.password = newPassword;
+  
+    // Force login again on all devices
+    user.refreshToken = null;
+  
+    await user.save();
+  };

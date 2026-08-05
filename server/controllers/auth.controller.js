@@ -7,6 +7,7 @@ import { clearRefreshCookieOptions } from "../utils/cookie.js";
 import {
   forgotPassword,
   resetPassword,
+  changePassword,
 } from "../services/password.service.js";
 import {
   sendVerificationEmail,
@@ -90,6 +91,24 @@ export const login = asyncHandler(async (req, res) => {
       new ApiResponse(
         true,
         "Password reset successfully. Please login again.",
+        null
+      )
+    );
+  });
+
+  export const changePasswordController = asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.validatedData;
+  
+    await changePassword(
+      req.user._id,
+      currentPassword,
+      newPassword
+    );
+  
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        "Password changed successfully. Please login again.",
         null
       )
     );

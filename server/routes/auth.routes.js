@@ -3,7 +3,12 @@ import {
   register,
   login,
   logout,
+  forgotPasswordController,
+  resetPasswordController,
 } from "../controllers/auth.controller.js";
+
+import { validateResetPassword } from "../validators/resetPassword.validator.js";
+import { validateForgotPassword } from "../validators/password.validator.js";
 import {
   validateRegister,
   validateLogin,
@@ -25,6 +30,17 @@ router.post(
   logout
 );
 
+router.post(
+  "/reset-password/:token",
+  validateResetPassword,
+  resetPasswordController
+);
+
+router.post(
+  "/forgot-password",
+  validateForgotPassword,
+  forgotPasswordController
+); 
 export default router;
 
 router.get("/me", authenticate, (req, res) => {

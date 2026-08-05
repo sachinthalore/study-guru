@@ -17,7 +17,19 @@ const envSchema = z.object({
   REFRESH_TOKEN_EXPIRES: z.string(),
 
   NODE_ENV: z.enum(["development", "production"]).default("development"),
+
+  SMTP_HOST: z.string(),
+
+SMTP_PORT: z.string(),
+
+SMTP_USER: z.string().email(),
+
+SMTP_PASS: z.string().min(1),
+
+FRONTEND_URL: z.string().url(),
+
 });
+
 
 const parsed = envSchema.safeParse(process.env);
 
@@ -28,3 +40,4 @@ if (!parsed.success) {
 }
 
 export default parsed.data;
+

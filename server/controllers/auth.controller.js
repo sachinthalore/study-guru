@@ -4,7 +4,10 @@ import { registerUser, loginUser } from "../services/auth.service.js";
 import { refreshCookieOptions } from "../utils/cookie.js";
 import { logoutUser } from "../services/auth.service.js";
 import { clearRefreshCookieOptions } from "../utils/cookie.js";
-
+import {
+  forgotPassword,
+  resetPassword,
+} from "../services/password.service.js";
 
 export const register = asyncHandler(async (req, res) => {
   const user = await registerUser(req.validatedData);
@@ -57,6 +60,32 @@ export const login = asyncHandler(async (req, res) => {
       new ApiResponse(
         true,
         "Logout successful.",
+        null
+      )
+    );
+  });
+
+  export const forgotPasswordController = asyncHandler(async (req, res) => {
+    await forgotPassword(req.validatedData.email);
+  
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        "Password reset link sent successfully.",
+        null
+      )
+    );
+  });
+
+  export const resetPasswordController = asyncHandler(async (req, res) => {
+    const { token, password } = req.validatedData;
+  
+    await resetPassword(token, password);
+  
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        "Password reset successfully. Please login again.",
         null
       )
     );

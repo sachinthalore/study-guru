@@ -2,6 +2,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { registerUser, loginUser } from "../services/auth.service.js";
 import { refreshCookieOptions } from "../utils/cookie.js";
+import { logoutUser } from "../services/auth.service.js";
+import { clearRefreshCookieOptions } from "../utils/cookie.js";
 
 
 export const register = asyncHandler(async (req, res) => {
@@ -42,6 +44,20 @@ export const login = asyncHandler(async (req, res) => {
           },
           accessToken,
         }
+      )
+    );
+  });
+
+  export const logout = asyncHandler(async (req, res) => {
+    await logoutUser(req.user._id);
+  
+    res.clearCookie("refreshToken", clearRefreshCookieOptions);
+  
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        "Logout successful.",
+        null
       )
     );
   });

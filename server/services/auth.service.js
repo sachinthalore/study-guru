@@ -57,3 +57,9 @@ export const loginUser = async ({ email, password }) => {
       refreshToken,
     };
   };
+
+  export const logoutUser = async (userId) => {
+    await User.findByIdAndUpdate(userId, {
+      refreshToken: null,
+    });
+  };

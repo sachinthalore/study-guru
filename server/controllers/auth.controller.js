@@ -1,6 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { registerUser, loginUser } from "../services/auth.service.js";
+import { refreshCookieOptions } from "../utils/cookie.js";
 
 
 export const register = asyncHandler(async (req, res) => {
@@ -26,12 +27,7 @@ export const login = asyncHandler(async (req, res) => {
     );
   
     // Refresh Token -> HTTP Only Cookie
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
   
     res.status(200).json(
       new ApiResponse(

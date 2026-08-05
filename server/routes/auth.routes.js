@@ -17,6 +17,10 @@ import {
     authenticate,
     authorize,
   } from "../middleware/auth.middleware.js";
+  import {
+    sendVerificationEmailController,
+    verifyEmailController,
+  } from "../controllers/auth.controller.js";
 
 const router = Router();
 
@@ -41,6 +45,17 @@ router.post(
   validateForgotPassword,
   forgotPasswordController
 ); 
+
+router.post(
+  "/send-verification",
+  authenticate,
+  sendVerificationEmailController
+);
+
+router.get(
+  "/verify-email/:token",
+  verifyEmailController
+);
 export default router;
 
 router.get("/me", authenticate, (req, res) => {

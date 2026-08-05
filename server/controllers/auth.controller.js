@@ -8,6 +8,10 @@ import {
   forgotPassword,
   resetPassword,
 } from "../services/password.service.js";
+import {
+  sendVerificationEmail,
+  verifyEmail,
+} from "../services/verification.service.js";
 
 export const register = asyncHandler(async (req, res) => {
   const user = await registerUser(req.validatedData);
@@ -86,6 +90,30 @@ export const login = asyncHandler(async (req, res) => {
       new ApiResponse(
         true,
         "Password reset successfully. Please login again.",
+        null
+      )
+    );
+  });
+
+  export const sendVerificationEmailController = asyncHandler(async (req, res) => {
+    await sendVerificationEmail(req.user._id);
+  
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        "Verification email sent successfully.",
+        null
+      )
+    );
+  });
+  
+  export const verifyEmailController = asyncHandler(async (req, res) => {
+    await verifyEmail(req.params.token);
+  
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        "Email verified successfully.",
         null
       )
     );

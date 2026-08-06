@@ -13,7 +13,7 @@ import authRoutes from "./routes/auth.routes.js";
 import cookieParser from "cookie-parser";
 import tokenRoutes from "./routes/token.routes.js";
 import userRoutes from "./routes/user.routes.js";
-
+import documentRoutes from "./routes/document.routes.js";
 const app = express();
 
 // ---------------- Middleware ----------------
@@ -96,6 +96,7 @@ app.use("/api/v1/token", tokenRoutes);
 
 app.use("/api/v1/users", userRoutes);
 
+app.use("/api/v1/documents", documentRoutes);
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// Update Document Validation
 const updateDocumentSchema = z.object({
   title: z
     .string()
@@ -24,6 +25,8 @@ export const validateUpdateDocument = (req, res, next) => {
   next();
 };
 
+
+// Upload Document Validation
 const uploadDocumentSchema = z.object({
   title: z
     .string()
@@ -33,6 +36,8 @@ const uploadDocumentSchema = z.object({
 });
 
 export const validateUploadDocument = (req, res, next) => {
+  
+
   const result = uploadDocumentSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -50,5 +55,6 @@ export const validateUploadDocument = (req, res, next) => {
   }
 
   req.validatedData = result.data;
+
   next();
 };

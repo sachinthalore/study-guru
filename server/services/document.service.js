@@ -3,9 +3,10 @@ import cloudinary from "../config/cloudinary.js";
 import Document from "../models/document.model.js";
 import ApiError from "../utils/apiError.js";
 import { extractText } from "./extraction/extract.service.js";
+import { generateDocumentSummary } from "./ai/summary.service.js";
 
 export const uploadDocument = async (file, data, userId) => {
-  // 1. Upload to Cloudinary
+  // 1. Upload file to Cloudinary
   const uploadResult = await new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
@@ -21,7 +22,7 @@ export const uploadDocument = async (file, data, userId) => {
     streamifier.createReadStream(file.buffer).pipe(stream);
   });
 
-  // 2. Create initial document
+  // 2. Create document in MongoDB
   const document = await Document.create({
     title: data.title,
     originalFileName: file.originalname,
@@ -39,24 +40,29 @@ export const uploadDocument = async (file, data, userId) => {
     const extractedText = await extractText(file);
 
     document.extractedText = extractedText;
+    document.processingStatus = "processing";
+
+    await document.save();
+
+    // 4. Generate AI summary
+    const summary = await generateDocumentSummary(extractedText);
+
+    document.summary = summary;
     document.aiProcessed = true;
     document.processingStatus = "completed";
 
-    // PDF pages (optional)
-    if (document.fileType === "pdf") {
-      document.totalPages =
-        extractedText.split("\f").length || 0;
-    }
-
+    // 5. Save final document
     await document.save();
+
+    return document;
   } catch (error) {
+    console.error("Document Processing Error:", error);
+
     document.processingStatus = "failed";
     await document.save();
 
-    console.error("Extraction Error:", error.message);
+    throw error;
   }
-
-  return document;
 };
 
 export const getDocuments = async (userId) => {

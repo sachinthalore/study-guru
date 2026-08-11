@@ -1,11 +1,29 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/apiResponse.js";
 import {
+  uploadDocument,
   getDocuments,
   getDocumentById,
   updateDocument,
   deleteDocument,
 } from "../services/document.service.js";
+
+export const uploadDocumentController = asyncHandler(async (req, res) => {
+  const document = await uploadDocument(
+    req.file,
+    req.validatedData,
+    req.user._id
+  );
+
+  res.status(201).json(
+    new ApiResponse(
+      true,
+      "Document uploaded successfully.",
+      document
+    )
+  );
+});
+
 
 export const getAllDocuments = asyncHandler(async (req, res) => {
   const documents = await getDocuments(req.user._id);

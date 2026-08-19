@@ -9,6 +9,28 @@ export const generateDocumentQuiz = async (extractedText) => {
     );
   }
 
+  // Basic content-quality check
+  const normalizedText = extractedText
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const lowerText = normalizedText.toLowerCase();
+
+  const loremIpsumPattern =
+    /\b(lorem ipsum|dolor sit amet|consectetur adipiscing elit)\b/g;
+
+  const loremMatches = lowerText.match(loremIpsumPattern) || [];
+
+  if (
+    normalizedText.length < 200 ||
+    loremMatches.length >= 2
+  ) {
+    throw new ApiError(
+      400,
+      "This document does not contain enough meaningful study material to generate a useful quiz."
+    );
+  }
+
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-3.5-flash",
@@ -31,6 +53,7 @@ Requirements:
 - Cover important concepts from the material.
 - Use simple and clear English.
 - Do not add information that is not present in the study material.
+- Do not create questions from irrelevant, placeholder, or meaningless content.
 - Return ONLY valid JSON.
 - Do not use markdown.
 - Do not wrap the JSON inside code fences.
@@ -55,7 +78,7 @@ Return exactly this JSON structure:
 
 Study Material:
 
-${extractedText}
+${normalizedText}
 `;
 
     const result = await model.generateContent(prompt);
@@ -78,7 +101,8 @@ ${extractedText}
         !question.question ||
         !Array.isArray(question.options) ||
         question.options.length !== 4 ||
-        !question.correctAnswer
+        !question.correctAnswer ||
+        !question.explanation
       ) {
         throw new Error("Invalid quiz question format.");
       }
@@ -93,6 +117,11 @@ ${extractedText}
     return parsed.quiz;
   } catch (error) {
     console.error("Gemini Quiz Error:", error);
+
+    // Preserve intentional API errors such as 400
+    if (error instanceof ApiError) {
+      throw error;
+    }
 
     throw new ApiError(
       500,

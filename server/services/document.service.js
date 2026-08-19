@@ -61,11 +61,11 @@ export const uploadDocument = async (file, data, userId) => {
 
     document.quiz = quiz;
 
-    // 6. Mark AI processing as completed
+    // 7. Mark AI processing as completed
     document.aiProcessed = true;
     document.processingStatus = "completed";
 
-    // 7. Save final document
+    // 8. Save final document
     await document.save();
 
     return document;

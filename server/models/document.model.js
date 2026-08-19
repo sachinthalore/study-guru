@@ -111,6 +111,25 @@ const documentSchema = new mongoose.Schema(
       ],
       default: [],
     },
+
+    flashcards: {
+      type: [
+        {
+          question: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+    
+          answer: {
+            type: String,
+            required: true,
+            trim: true,
+          },
+        },
+      ],
+      default: [],
+    },
     
     aiProcessed: {
       type: Boolean,

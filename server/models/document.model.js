@@ -75,10 +75,41 @@ const documentSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    
+
     aiNotes: {
       type: String,
       default: "",
+    },
+
+    quiz: {
+      type: [
+        {
+          question: {
+            type: String,
+            required: true,
+          },
+    
+          options: {
+            type: [String],
+            required: true,
+            validate: {
+              validator: (value) => value.length === 4,
+              message: "Quiz question must have exactly 4 options.",
+            },
+          },
+    
+          correctAnswer: {
+            type: String,
+            required: true,
+          },
+    
+          explanation: {
+            type: String,
+            default: "",
+          },
+        },
+      ],
+      default: [],
     },
     
     aiProcessed: {

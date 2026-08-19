@@ -70,7 +70,17 @@ const documentSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-
+    
+    summary: {
+      type: String,
+      default: "",
+    },
+    
+    aiNotes: {
+      type: String,
+      default: "",
+    },
+    
     aiProcessed: {
       type: Boolean,
       default: false,

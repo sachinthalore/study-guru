@@ -4,6 +4,7 @@ import Document from "../models/document.model.js";
 import ApiError from "../utils/apiError.js";
 import { extractText } from "./extraction/extract.service.js";
 import { generateDocumentSummary } from "./ai/summary.service.js";
+import { generateDocumentNotes } from "./ai/notes.service.js";
 
 export const uploadDocument = async (file, data, userId) => {
   // 1. Upload file to Cloudinary
@@ -48,10 +49,17 @@ export const uploadDocument = async (file, data, userId) => {
     const summary = await generateDocumentSummary(extractedText);
 
     document.summary = summary;
+
+    // 5. Generate AI notes
+    const notes = await generateDocumentNotes(extractedText);
+
+    document.aiNotes = notes;
+
+    // 6. Mark AI processing as completed
     document.aiProcessed = true;
     document.processingStatus = "completed";
 
-    // 5. Save final document
+    // 7. Save final document
     await document.save();
 
     return document;

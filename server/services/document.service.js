@@ -6,6 +6,7 @@ import { extractText } from "./extraction/extract.service.js";
 import { generateDocumentSummary } from "./ai/summary.service.js";
 import { generateDocumentNotes } from "./ai/notes.service.js";
 import { generateDocumentQuiz } from "./ai/quiz.service.js";
+import { generateDocumentFlashcards } from "./ai/flashcards.service.js";
 
 export const uploadDocument = async (file, data, userId) => {
   // 1. Upload file to Cloudinary
@@ -61,11 +62,16 @@ export const uploadDocument = async (file, data, userId) => {
 
     document.quiz = quiz;
 
-    // 7. Mark AI processing as completed
+    // 7. Generate AI flashcards
+    const flashcards = await generateDocumentFlashcards(extractedText);
+
+    document.flashcards = flashcards;
+
+    // 8. Mark AI processing as completed
     document.aiProcessed = true;
     document.processingStatus = "completed";
 
-    // 8. Save final document
+    // 9. Save final document
     await document.save();
 
     return document;

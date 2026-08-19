@@ -5,6 +5,7 @@ import ApiError from "../utils/apiError.js";
 import { extractText } from "./extraction/extract.service.js";
 import { generateDocumentSummary } from "./ai/summary.service.js";
 import { generateDocumentNotes } from "./ai/notes.service.js";
+import { generateDocumentQuiz } from "./ai/quiz.service.js";
 
 export const uploadDocument = async (file, data, userId) => {
   // 1. Upload file to Cloudinary
@@ -54,6 +55,11 @@ export const uploadDocument = async (file, data, userId) => {
     const notes = await generateDocumentNotes(extractedText);
 
     document.aiNotes = notes;
+
+    // 6. Generate AI quiz
+    const quiz = await generateDocumentQuiz(extractedText);
+
+    document.quiz = quiz;
 
     // 6. Mark AI processing as completed
     document.aiProcessed = true;

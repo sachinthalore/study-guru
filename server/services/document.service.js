@@ -7,6 +7,8 @@ import { generateDocumentSummary } from "./ai/summary.service.js";
 import { generateDocumentNotes } from "./ai/notes.service.js";
 import { generateDocumentQuiz } from "./ai/quiz.service.js";
 import { generateDocumentFlashcards } from "./ai/flashcards.service.js";
+import { createDocumentChunks } from "./rag/chunk-storage.service.js";
+import { generateAndStoreDocumentEmbeddings } from "./rag/embedding-storage.service.js";
 
 export const uploadDocument = async (file, data, userId) => {
   // 1. Upload file to Cloudinary
@@ -46,6 +48,17 @@ export const uploadDocument = async (file, data, userId) => {
     document.processingStatus = "processing";
 
     await document.save();
+
+
+    // Create document chunks for RAG
+    await createDocumentChunks(
+    document._id,
+    extractedText
+  );
+
+    await generateAndStoreDocumentEmbeddings(
+    document._id
+  );
 
     // 4. Generate AI summary
     const summary = await generateDocumentSummary(extractedText);

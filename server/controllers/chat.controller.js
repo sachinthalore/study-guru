@@ -2,6 +2,8 @@ import { generateAIResponse } from "../services/chat.service.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import logger from "../config/logger.js";
 import ApiResponse from "../utils/apiResponse.js";
+import { generateRagAnswer } from "../services/rag/rag-answer.service.js";
+
 export const chatWithAI = asyncHandler(async (req, res) => {
   const { prompt, mode, notesContent } = req.validatedData;
 
@@ -36,6 +38,32 @@ ${prompt}
       "AI response generated successfully",
       {
         reply: text,
+      }
+    )
+  );
+});
+
+export const chatWithDocument = asyncHandler(async (req, res) => {
+  const { prompt, documentId } = req.validatedData;
+  const userId = req.user._id;
+
+  logger.info(`Generating RAG response | Document: ${documentId}`);
+
+  const result = await generateRagAnswer(
+    prompt,
+    documentId,
+    userId
+  );
+
+  logger.info(`RAG response generated successfully | Document: ${documentId}`);
+
+  res.status(200).json(
+    new ApiResponse(
+      true,
+      "RAG response generated successfully",
+      {
+        reply: result.answer,
+        sources: result.sources,
       }
     )
   );

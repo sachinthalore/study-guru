@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import genAI from "../../config/gemini.js";
 import ApiError from "../../utils/apiError.js";
 import { retrieveRelevantChunks } from "./retrieval.service.js";
@@ -22,6 +23,13 @@ export const generateRagAnswer = async (
     );
   }
 
+  if (!mongoose.isValidObjectId(documentId)) {
+    throw new ApiError(
+      400,
+      "Invalid document ID."
+    );
+  }
+
   if (!userId) {
     throw new ApiError(
       401,
@@ -42,7 +50,8 @@ export const generateRagAnswer = async (
         "Document not found."
       );
     }
-    // 1. Retrieve relevant document chunks
+
+    // 2. Retrieve relevant document chunks
     const chunks = await retrieveRelevantChunks(
       query,
       documentId,
@@ -57,7 +66,7 @@ export const generateRagAnswer = async (
       };
     }
 
-    // 2. Build context from retrieved chunks
+    // 3. Build context
     const context = chunks
       .map(
         (chunk, index) =>
@@ -65,7 +74,7 @@ export const generateRagAnswer = async (
       )
       .join("\n\n");
 
-    // 3. Gemini
+    // 4. Gemini
     const model = genAI.getGenerativeModel({
       model: "gemini-3.5-flash",
     });
@@ -93,16 +102,19 @@ Document Context:
 ${context}
 `;
 
-    // 4. Generate answer
+    // 5. Generate answer
     const result = await model.generateContent(prompt);
 
     const answer = result.response.text().trim();
 
+    // 6. Return answer + sources
     return {
       answer,
+
       sources: chunks.map((chunk) => ({
         chunkIndex: chunk.chunkIndex,
-        score: chunk.score,
+        score: Number(chunk.score.toFixed(4)),
+        preview: chunk.content.slice(0, 200),
       })),
     };
   } catch (error) {

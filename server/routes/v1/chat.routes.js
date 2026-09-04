@@ -1,9 +1,22 @@
 import { Router } from "express";
-import { chatWithAI } from "../../controllers/chat.controller.js";
-import { validatePrompt } from "../../middleware/validate.middleware.js";
+import {
+    chatWithAI,
+    chatWithDocument,
+  } from "../../controllers/chat.controller.js";
+  import {
+    validatePrompt,
+    validateDocumentChat,
+  } from "../../middleware/validate.middleware.js";
+import { authenticate } from "../../middleware/auth.middleware.js";
 
 const router = Router();
 
 router.post("/chat", validatePrompt, chatWithAI);
+router.post(
+  "/document-chat",
+  authenticate,
+  validateDocumentChat,
+  chatWithDocument
+);
 
 export default router;

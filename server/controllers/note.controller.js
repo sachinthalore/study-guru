@@ -15,15 +15,13 @@ export const createNoteController = asyncHandler(
       req.validatedData
     );
 
-    return res
-      .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          note,
-          "Note created successfully."
-        )
-      );
+    return res.status(201).json(
+      new ApiResponse(
+        true,
+        "Note created successfully.",
+        note
+      )
+    );
   }
 );
 
@@ -31,15 +29,13 @@ export const getAllNotesController = asyncHandler(
   async (req, res) => {
     const notes = await getAllNotes(req.user._id);
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          notes,
-          "Notes fetched successfully."
-        )
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Notes fetched successfully.",
+        notes
+      )
+    );
   }
 );
 
@@ -50,15 +46,13 @@ export const getSingleNoteController = asyncHandler(
       req.user._id
     );
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          note,
-          "Note fetched successfully."
-        )
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Note fetched successfully.",
+        note
+      )
+    );
   }
 );
 
@@ -70,15 +64,13 @@ export const updateNoteController = asyncHandler(
       req.validatedData
     );
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          note,
-          "Note updated successfully."
-        )
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Note updated successfully.",
+        note
+      )
+    );
   }
 );
 
@@ -89,14 +81,12 @@ export const deleteNoteController = asyncHandler(
       req.user._id
     );
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          note,
-          "Note deleted successfully."
-        )
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Note deleted successfully.",
+        note
+      )
+    );
   }
 );

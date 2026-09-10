@@ -1,11 +1,33 @@
-import { generateAIResponse } from "../services/chat.service.js";
+import {
+  generateAIResponse,
+  createChat,
+  getAllChats,
+  getSingleChat,
+  updateChat,
+  deleteChat,
+} from "../services/chat.service.js";
+
 import asyncHandler from "../utils/asyncHandler.js";
 import logger from "../config/logger.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { generateRagAnswer } from "../services/rag/rag-answer.service.js";
 
 export const chatWithAI = asyncHandler(async (req, res) => {
-  const { prompt, mode, notesContent } = req.validatedData;
+  const {
+    prompt,
+    chatId,
+    mode,
+    notesContent,
+  } = req.validatedData;
+
+  const userId = req.user._id;
+
+  let chat = null;
+
+  // Continue existing chat
+  if (chatId) {
+    chat = await getSingleChat(chatId, userId);
+  }
 
   let finalPrompt = prompt;
 
@@ -24,30 +46,128 @@ ${prompt}
 `;
   }
 
-  // AI request start log
-  logger.info(`Generating AI response | Mode: ${mode || "global"}`);
+  logger.info(
+    `Generating AI response | User: ${userId} | Chat: ${chat?._id || "new"} | Mode: ${mode || "global"}`
+  );
 
-  const text = await generateAIResponse(finalPrompt);
+  // Generate AI response BEFORE creating a new chat
+  const history = chat ? chat.messages : [];
 
-  // AI request success log
-  logger.info(`AI response generated successfully | Mode: ${mode || "global"}`);
+  const { text, totalTokens } = await generateAIResponse(
+    finalPrompt,
+    history
+  );
 
-  res.status(200).json(
+  // Create new chat only after AI response succeeds
+  if (!chat) {
+    chat = await createChat(userId, {
+      title: prompt.slice(0, 50),
+      messages: [
+        { role: "user", content: prompt },
+        { role: "assistant", content: text },
+      ],
+      model: "gemini",
+      totalTokens,
+    });
+  } else {
+    // Existing chat → append messages
+    chat.messages.push({ role: "user", content: prompt });
+chat.messages.push({ role: "assistant", content: text });
+
+chat.totalTokens += totalTokens;
+
+await chat.save();
+  }
+
+  logger.info(
+    `AI response generated successfully | User: ${userId} | Chat: ${chat._id}`
+  );
+
+  return res.status(200).json(
     new ApiResponse(
       true,
-      "AI response generated successfully",
+      "AI response generated successfully.",
       {
+        chatId: chat._id,
         reply: text,
       }
     )
   );
 });
 
+export const getChatsController = asyncHandler(
+  async (req, res) => {
+    const chats = await getAllChats(req.user._id);
+
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Chats fetched successfully.",
+        chats
+      )
+    );
+  }
+);
+
+export const getSingleChatController = asyncHandler(
+  async (req, res) => {
+    const chat = await getSingleChat(
+      req.params.id,
+      req.user._id
+    );
+
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Chat fetched successfully.",
+        chat
+      )
+    );
+  }
+);
+
+export const updateChatController = asyncHandler(
+  async (req, res) => {
+    const chat = await updateChat(
+      req.params.id,
+      req.user._id,
+      req.validatedData
+    );
+
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Chat updated successfully.",
+        chat
+      )
+    );
+  }
+);
+
+export const deleteChatController = asyncHandler(
+  async (req, res) => {
+    const chat = await deleteChat(
+      req.params.id,
+      req.user._id
+    );
+
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Chat deleted successfully.",
+        chat
+      )
+    );
+  }
+);
+
 export const chatWithDocument = asyncHandler(async (req, res) => {
   const { prompt, documentId } = req.validatedData;
   const userId = req.user._id;
 
-  logger.info(`Generating RAG response | Document: ${documentId}`);
+  logger.info(
+    `Generating RAG response | Document: ${documentId}`
+  );
 
   const result = await generateRagAnswer(
     prompt,
@@ -55,12 +175,14 @@ export const chatWithDocument = asyncHandler(async (req, res) => {
     userId
   );
 
-  logger.info(`RAG response generated successfully | Document: ${documentId}`);
+  logger.info(
+    `RAG response generated successfully | Document: ${documentId}`
+  );
 
-  res.status(200).json(
+  return res.status(200).json(
     new ApiResponse(
       true,
-      "RAG response generated successfully",
+      "RAG response generated successfully.",
       {
         reply: result.answer,
         sources: result.sources,

@@ -15,10 +15,10 @@ const questionSchema = new mongoose.Schema(
     ],
 
     correctAnswer: {
-      type: Number,
+      type: String,
       required: true,
     },
-
+    
     explanation: {
       type: String,
       default: "",

@@ -149,10 +149,6 @@ const documentSchema = new mongoose.Schema(
       default: "pending",
     },
 
-    summary: {
-      type: String,
-      default: "",
-    },
     
     metadata: {
       type: mongoose.Schema.Types.Mixed,

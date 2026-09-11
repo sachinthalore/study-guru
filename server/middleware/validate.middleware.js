@@ -8,6 +8,12 @@ import {
   chatIdSchema,
 } from "../validators/chat.validator.js";
 
+import {
+  createQuizSchema,
+  quizIdSchema,
+  submitQuizSchema,
+} from "../validators/quiz.validator.js";
+
 const promptSchema = z.object({
   prompt: z.string().min(1).max(1000),
 
@@ -103,5 +109,46 @@ export const validateChatId = (req, res, next) => {
     });
   }
 
+  next();
+};
+
+export const validateCreateQuiz = (req, res, next) => {
+  const validation = createQuizSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      success: false,
+      error: validation.error,
+    });
+  }
+
+  req.validatedData = validation.data;
+  next();
+};
+
+export const validateQuizId = (req, res, next) => {
+  const validation = quizIdSchema.safeParse(req.params);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid quiz ID.",
+    });
+  }
+
+  next();
+};
+
+export const validateSubmitQuiz = (req, res, next) => {
+  const validation = submitQuizSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      success: false,
+      error: validation.error,
+    });
+  }
+
+  req.validatedData = validation.data;
   next();
 };

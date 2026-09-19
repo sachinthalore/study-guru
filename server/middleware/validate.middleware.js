@@ -14,6 +14,11 @@ import {
   submitQuizSchema,
 } from "../validators/quiz.validator.js";
 
+import {
+  createStudySessionSchema,
+  studySessionIdSchema,
+} from "../validators/studySession.validator.js";
+
 const promptSchema = z.object({
   prompt: z.string().min(1).max(1000),
 

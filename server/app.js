@@ -17,6 +17,7 @@ import documentRoutes from "./routes/document.routes.js";
 import noteRoutes from "./routes/note.routes.js";
 import quizRoutes from "./routes/quiz.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import studySessionRoutes from "./routes/studySession.routes.js";
 
 const app = express();
 
@@ -107,6 +108,8 @@ app.use("/api/v1/notes", noteRoutes);
 app.use("/api/v1/quizzes", quizRoutes);
 
 app.use("/api/v1/analytics", analyticsRoutes);
+
+app.use("/api/v1/study-sessions", studySessionRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({

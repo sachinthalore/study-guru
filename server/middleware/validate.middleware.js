@@ -19,6 +19,12 @@ import {
   studySessionIdSchema,
 } from "../validators/studySession.validator.js";
 
+import {
+  createFlashcardSchema,
+  updateFlashcardSchema,
+  flashcardIdSchema,
+} from "../validators/flashcard.validator.js";
+
 const promptSchema = z.object({
   prompt: z.string().min(1).max(1000),
 
@@ -155,5 +161,80 @@ export const validateSubmitQuiz = (req, res, next) => {
   }
 
   req.validatedData = validation.data;
+  next();
+};
+
+export const validateCreateStudySession = (req, res, next) => {
+  const result = createStudySessionSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed.",
+      errors: result.error.issues,
+    });
+  }
+
+  req.validatedData = result.data;
+  next();
+};
+
+export const validateStudySessionId = (req, res, next) => {
+  const result = studySessionIdSchema.safeParse(req.params);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed.",
+      errors: result.error.issues,
+    });
+  }
+
+  req.validatedData = result.data;
+  next();
+};
+
+export const validateCreateFlashcard = (req, res, next) => {
+  const result = createFlashcardSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed.",
+      errors: result.error.issues,
+    });
+  }
+
+  req.validatedData = result.data;
+  next();
+};
+
+export const validateUpdateFlashcard = (req, res, next) => {
+  const result = updateFlashcardSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed.",
+      errors: result.error.issues,
+    });
+  }
+
+  req.validatedData = result.data;
+  next();
+};
+
+export const validateFlashcardId = (req, res, next) => {
+  const result = flashcardIdSchema.safeParse(req.params);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed.",
+      errors: result.error.issues,
+    });
+  }
+
+  req.validatedData = result.data;
   next();
 };

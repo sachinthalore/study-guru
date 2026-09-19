@@ -16,6 +16,8 @@ import userRoutes from "./routes/user.routes.js";
 import documentRoutes from "./routes/document.routes.js";
 import noteRoutes from "./routes/note.routes.js";
 import quizRoutes from "./routes/quiz.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+
 const app = express();
 
 // ---------------- Middleware ----------------
@@ -103,6 +105,8 @@ app.use("/api/v1/documents", documentRoutes);
 app.use("/api/v1/notes", noteRoutes);
 
 app.use("/api/v1/quizzes", quizRoutes);
+
+app.use("/api/v1/analytics", analyticsRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({

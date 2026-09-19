@@ -10,34 +10,58 @@ const analyticsSchema = new mongoose.Schema(
       index: true,
     },
 
-    documentsUploaded: {
+    totalDocuments: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
-    notesCreated: {
+    totalQuizzes: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
-    quizzesCompleted: {
+    completedQuizzes: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
-    flashcardsReviewed: {
+    totalQuizQuestions: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
-    aiChats: {
+    correctQuizAnswers: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     totalStudyTime: {
       type: Number,
       default: 0,
+      min: 0,
+    },
+
+    totalNotes: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    totalFlashcards: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    totalChatMessages: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {

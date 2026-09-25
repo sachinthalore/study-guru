@@ -7,6 +7,7 @@ import { generateDocumentQuiz } from "./quiz.service.js";
 import { generateDocumentFlashcards } from "./flashcards.service.js";
 
 import { isGeminiQuotaError } from "../../utils/geminiRetry.js";
+import mongoose from "mongoose";
 
 const QUOTA_ERROR_MESSAGE =
   "AI service quota or rate limit reached. Please try again later.";
@@ -16,6 +17,10 @@ const shouldProcess = (status) => {
 };
 
 export const reprocessDocumentAI = async (documentId, userId) => {
+    if (!mongoose.isValidObjectId(documentId)) {
+        throw new ApiError(400, "Invalid document ID.");
+      }
+      
   const document = await Document.findOne({
     _id: documentId,
     uploadedBy: userId,

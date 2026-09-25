@@ -70,7 +70,7 @@ const documentSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    
+
     summary: {
       type: String,
       default: "",
@@ -88,7 +88,7 @@ const documentSchema = new mongoose.Schema(
             type: String,
             required: true,
           },
-    
+
           options: {
             type: [String],
             required: true,
@@ -97,12 +97,12 @@ const documentSchema = new mongoose.Schema(
               message: "Quiz question must have exactly 4 options.",
             },
           },
-    
+
           correctAnswer: {
             type: String,
             required: true,
           },
-    
+
           explanation: {
             type: String,
             default: "",
@@ -120,7 +120,7 @@ const documentSchema = new mongoose.Schema(
             required: true,
             trim: true,
           },
-    
+
           answer: {
             type: String,
             required: true,
@@ -130,26 +130,76 @@ const documentSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    
+
+    aiProcessing: {
+      summary: {
+        status: {
+          type: String,
+          enum: ["pending", "completed", "failed"],
+          default: "pending",
+        },
+        error: {
+          type: String,
+          default: "",
+        },
+      },
+
+      notes: {
+        status: {
+          type: String,
+          enum: ["pending", "completed", "failed"],
+          default: "pending",
+        },
+        error: {
+          type: String,
+          default: "",
+        },
+      },
+
+      quiz: {
+        status: {
+          type: String,
+          enum: ["pending", "completed", "failed"],
+          default: "pending",
+        },
+        error: {
+          type: String,
+          default: "",
+        },
+      },
+
+      flashcards: {
+        status: {
+          type: String,
+          enum: ["pending", "completed", "failed"],
+          default: "pending",
+        },
+        error: {
+          type: String,
+          default: "",
+        },
+      },
+    },
+
     aiProcessed: {
       type: Boolean,
       default: false,
     },
 
     processingStatus: {
-      type: String,
-      enum: [
-        "pending",
-        "uploading",
-        "extracting",
-        "processing",
-        "completed",
-        "failed",
-      ],
-      default: "pending",
-    },
+  type: String,
+  enum: [
+    "pending",
+    "uploading",
+    "extracting",
+    "processing",
+    "partial",
+    "completed",
+    "failed",
+  ],
+  default: "pending",
+},
 
-    
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

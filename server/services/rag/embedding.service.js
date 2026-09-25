@@ -2,7 +2,9 @@ import genAI from "../../config/gemini.js";
 
 const EMBEDDING_MODEL = "gemini-embedding-001";
 
-export const generateDocumentEmbedding = async (text) => {
+export const generateDocumentEmbedding = async (
+  text
+) => {
   if (!text || !text.trim()) {
     throw new Error(
       "Text is required for embedding generation."
@@ -10,24 +12,20 @@ export const generateDocumentEmbedding = async (text) => {
   }
 
   try {
-    const model = genAI.getGenerativeModel({
+    const result = await genAI.models.embedContent({
       model: EMBEDDING_MODEL,
-    });
-
-    const result = await model.embedContent({
-      content: {
-        parts: [
-          {
-            text: text.trim(),
-          },
-        ],
+      contents: text.trim(),
+      config: {
+        taskType: "RETRIEVAL_DOCUMENT",
       },
-      taskType: "RETRIEVAL_DOCUMENT",
     });
 
-    return result.embedding.values;
+    return result.embeddings[0].values;
   } catch (error) {
-    console.error("Gemini Embedding Error:", error);
+    console.error(
+      "Gemini Embedding Error:",
+      error
+    );
 
     throw new Error(
       "Failed to generate document embedding."

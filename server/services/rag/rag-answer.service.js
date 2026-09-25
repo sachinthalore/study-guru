@@ -3,6 +3,9 @@ import genAI from "../../config/gemini.js";
 import ApiError from "../../utils/apiError.js";
 import { retrieveRelevantChunks } from "./retrieval.service.js";
 import Document from "../../models/document.model.js";
+import { generateContentWithRetry } from "../../utils/geminiRetry.js";
+
+const GEMINI_MODEL = "gemini-3.8-flash";
 
 export const generateRagAnswer = async (
   query,
@@ -74,11 +77,7 @@ export const generateRagAnswer = async (
       )
       .join("\n\n");
 
-    // 4. Gemini
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.5-flash",
-    });
-
+    // 4. Build prompt
     const prompt = `
 You are Study Guru, an AI study assistant.
 
@@ -102,10 +101,23 @@ Document Context:
 ${context}
 `;
 
-    // 5. Generate answer
-    const result = await model.generateContent(prompt);
+    // 5. Generate answer with retry
+    const result =
+      await generateContentWithRetry(
+        () =>
+          genAI.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: prompt,
+          })
+      );
 
-    const answer = result.response.text().trim();
+    const answer = result.text?.trim();
+
+    if (!answer) {
+      throw new Error(
+        "Gemini returned an empty RAG answer."
+      );
+    }
 
     // 6. Return answer + sources
     return {
@@ -113,7 +125,9 @@ ${context}
 
       sources: chunks.map((chunk) => ({
         chunkIndex: chunk.chunkIndex,
-        score: Number(chunk.score.toFixed(4)),
+        score: Number(
+          chunk.score.toFixed(4)
+        ),
         preview: chunk.content.slice(0, 200),
       })),
     };
@@ -126,6 +140,31 @@ ${context}
     if (error instanceof ApiError) {
       throw error;
     }
+
+    const statusCode =
+      error?.status ||
+      error?.statusCode ||
+      error?.response?.status ||
+      error?.code;
+
+    if (statusCode === 429) {
+      throw new ApiError(
+        429,
+        "AI service quota or rate limit reached. Please try again later."
+      );
+    }
+
+    if (
+      typeof statusCode === "number" &&
+      statusCode >= 500 &&
+      statusCode < 600
+    ) {
+      throw new ApiError(
+        503,
+        "AI service is temporarily unavailable. Please try again later."
+      );
+    }
+
 
     throw new ApiError(
       500,

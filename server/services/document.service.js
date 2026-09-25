@@ -9,9 +9,9 @@ import { generateDocumentQuiz } from "./ai/quiz.service.js";
 import { generateDocumentFlashcards } from "./ai/flashcards.service.js";
 import { createDocumentChunks } from "./rag/chunk-storage.service.js";
 import { generateAndStoreDocumentEmbeddings } from "./rag/embedding-storage.service.js";
+import { isGeminiQuotaError } from "../utils/geminiRetry.js";
 
 export const uploadDocument = async (file, data, userId) => {
-  // 1. Upload file to Cloudinary
   const uploadResult = await new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
@@ -27,7 +27,6 @@ export const uploadDocument = async (file, data, userId) => {
     streamifier.createReadStream(file.buffer).pipe(stream);
   });
 
-  // 2. Create document in MongoDB
   const document = await Document.create({
     title: data.title,
     originalFileName: file.originalname,
@@ -41,51 +40,176 @@ export const uploadDocument = async (file, data, userId) => {
   });
 
   try {
-    // 3. Extract text
+    // ==========================================
+    // 1. TEXT EXTRACTION
+    // ==========================================
+
     const extractedText = await extractText(file);
 
     document.extractedText = extractedText;
     document.processingStatus = "processing";
-
     await document.save();
 
+    // ==========================================
+    // 2. RAG PROCESSING
+    // ==========================================
 
-    // Create document chunks for RAG
-    await createDocumentChunks(
-    document._id,
-    extractedText
-  );
+    await createDocumentChunks(document._id, extractedText);
+    await generateAndStoreDocumentEmbeddings(document._id);
 
-    await generateAndStoreDocumentEmbeddings(
-    document._id
-  );
+    // ==========================================
+    // 3. AI SUMMARY
+    // ==========================================
+    let aiQuotaExceeded = false;
+    try {
+      const summary = await generateDocumentSummary(extractedText);
 
-    // 4. Generate AI summary
-    const summary = await generateDocumentSummary(extractedText);
+      document.summary = summary;
+      document.aiProcessing.summary.status = "completed";
+      document.aiProcessing.summary.error = "";
 
-    document.summary = summary;
+      await document.save();
+    } catch (error) {
+      console.error("AI Summary Error:", error);
 
-    // 5. Generate AI notes
-    const notes = await generateDocumentNotes(extractedText);
+      if (isGeminiQuotaError(error)) {
+        aiQuotaExceeded = true;
+      }
 
-    document.aiNotes = notes;
+      document.aiProcessing.summary.status = "failed";
+      document.aiProcessing.summary.error =
+        error?.message || "Failed to generate summary.";
 
-    // 6. Generate AI quiz
-    const quiz = await generateDocumentQuiz(extractedText);
+      await document.save();
+    }
 
-    document.quiz = quiz;
+    // ==========================================
+    // 4. AI NOTES
+    // ==========================================
 
-    // 7. Generate AI flashcards
-    const flashcards = await generateDocumentFlashcards(extractedText);
+    if (aiQuotaExceeded) {
+      console.warn("Skipping AI Notes because Gemini quota is exhausted.");
 
-    document.flashcards = flashcards;
+      document.aiProcessing.notes.status = "failed";
+      document.aiProcessing.notes.error =
+        "AI service quota or rate limit reached. Please try again later.";
 
-    // 8. Mark AI processing as completed
-    document.aiProcessed = true;
-    document.processingStatus = "completed";
+      await document.save();
+    } else {
+      try {
+        const notes = await generateDocumentNotes(extractedText);
 
-    // 9. Save final document
-    await document.save();
+        document.aiNotes = notes;
+        document.aiProcessing.notes.status = "completed";
+        document.aiProcessing.notes.error = "";
+
+        await document.save();
+      } catch (error) {
+        console.error("AI Notes Error:", error);
+
+        if (isGeminiQuotaError(error)) {
+          aiQuotaExceeded = true;
+        }
+
+        document.aiProcessing.notes.status = "failed";
+        document.aiProcessing.notes.error =
+          error?.message || "Failed to generate notes.";
+
+        await document.save();
+      }
+    }
+
+    // ==========================================
+    // 5. AI QUIZ
+    // ==========================================
+
+    if (aiQuotaExceeded) {
+      console.warn("Skipping AI Quiz because Gemini quota is exhausted.");
+
+      document.aiProcessing.quiz.status = "failed";
+      document.aiProcessing.quiz.error =
+        "AI service quota or rate limit reached. Please try again later.";
+
+      await document.save();
+    } else {
+      try {
+        const quiz = await generateDocumentQuiz(extractedText);
+
+        document.quiz = quiz;
+        document.aiProcessing.quiz.status = "completed";
+        document.aiProcessing.quiz.error = "";
+
+        await document.save();
+      } catch (error) {
+        console.error("AI Quiz Error:", error);
+
+        if (isGeminiQuotaError(error)) {
+          aiQuotaExceeded = true;
+        }
+
+        document.aiProcessing.quiz.status = "failed";
+        document.aiProcessing.quiz.error =
+          error?.message || "Failed to generate quiz.";
+
+        await document.save();
+      }
+    }
+
+    // ==========================================
+    // 6. AI FLASHCARDS
+    // ==========================================
+
+    if (aiQuotaExceeded) {
+      console.warn(
+        "Skipping AI Flashcards because Gemini quota is exhausted."
+      );
+
+      document.aiProcessing.flashcards.status = "failed";
+      document.aiProcessing.flashcards.error =
+        "AI service quota or rate limit reached. Please try again later.";
+
+      await document.save();
+    } else {
+      try {
+        const flashcards = await generateDocumentFlashcards(extractedText);
+
+        document.flashcards = flashcards;
+        document.aiProcessing.flashcards.status = "completed";
+        document.aiProcessing.flashcards.error = "";
+
+        await document.save();
+      } catch (error) {
+        console.error("AI Flashcards Error:", error);
+
+        if (isGeminiQuotaError(error)) {
+          aiQuotaExceeded = true;
+        }
+
+        document.aiProcessing.flashcards.status = "failed";
+        document.aiProcessing.flashcards.error =
+          error?.message || "Failed to generate flashcards.";
+
+        await document.save();
+      }
+    }
+
+    // ==========================================
+    // 7. FINAL AI PROCESSING STATUS
+    // ==========================================
+
+    const allAIProcessed =
+  document.aiProcessing.summary.status === "completed" &&
+  document.aiProcessing.notes.status === "completed" &&
+  document.aiProcessing.quiz.status === "completed" &&
+  document.aiProcessing.flashcards.status === "completed";
+
+document.aiProcessed = allAIProcessed;
+
+document.processingStatus = allAIProcessed
+  ? "completed"
+  : "partial";
+
+await document.save();
 
     return document;
   } catch (error) {

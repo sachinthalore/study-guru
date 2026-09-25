@@ -8,6 +8,8 @@ import {
   deleteDocument,
 } from "../services/document.service.js";
 
+import { reprocessDocumentAI } from "../services/ai/reprocess.service.js";
+
 export const uploadDocumentController = asyncHandler(async (req, res) => {
   const document = await uploadDocument(
     req.file,
@@ -82,3 +84,20 @@ export const deleteDocumentController = asyncHandler(async (req, res) => {
     )
   );
 });
+
+export const reprocessDocumentAIController = asyncHandler(
+  async (req, res) => {
+    const document = await reprocessDocumentAI(
+      req.params.id,
+      req.user._id
+    );
+
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        "Document AI processing completed successfully.",
+        document
+      )
+    );
+  }
+);

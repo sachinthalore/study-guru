@@ -10,22 +10,15 @@ export const generateQueryEmbedding = async (query) => {
   }
 
   try {
-    const model = genAI.getGenerativeModel({
+    const result = await genAI.models.embedContent({
       model: EMBEDDING_MODEL,
-    });
-
-    const result = await model.embedContent({
-      content: {
-        parts: [
-          {
-            text: query.trim(),
-          },
-        ],
+      contents: query.trim(),
+      config: {
+        taskType: "RETRIEVAL_QUERY",
       },
-      taskType: "RETRIEVAL_QUERY",
     });
 
-    return result.embedding.values;
+    return result.embeddings[0].values;
   } catch (error) {
     console.error(
       "Gemini Query Embedding Error:",

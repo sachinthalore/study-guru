@@ -12,7 +12,9 @@ import {
   getSingleDocument,
   updateDocumentController,
   deleteDocumentController,
+  reprocessDocumentAIController,
 } from "../controllers/document.controller.js";
+
 const router = Router();
 
 router.post(
@@ -38,4 +40,11 @@ router.delete(
   authenticate,
   deleteDocumentController
 );
+
+router.post(
+  "/:id/reprocess-ai",
+  authenticate,
+  reprocessDocumentAIController
+);
+
 export default router;

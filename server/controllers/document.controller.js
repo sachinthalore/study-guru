@@ -92,10 +92,14 @@ export const reprocessDocumentAIController = asyncHandler(
       req.user._id
     );
 
+    const message = document.aiProcessed
+      ? "Document AI processing completed successfully."
+      : "Document AI processing completed partially.";
+
     res.status(200).json(
       new ApiResponse(
         true,
-        "Document AI processing completed successfully.",
+        message,
         document
       )
     );

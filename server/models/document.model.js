@@ -81,6 +81,30 @@ const documentSchema = new mongoose.Schema(
       default: "",
     },
 
+    mindMap: {
+      title: {
+        type: String,
+        default: "",
+      },
+
+      root: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
+      },
+
+      metadata: {
+        wordCount: {
+          type: Number,
+          default: 0,
+        },
+
+        nodeCount: {
+          type: Number,
+          default: 0,
+        },
+      },
+    },
+
     quiz: {
       type: [
         {
@@ -138,6 +162,7 @@ const documentSchema = new mongoose.Schema(
           enum: ["pending", "completed", "failed"],
           default: "pending",
         },
+
         error: {
           type: String,
           default: "",
@@ -150,6 +175,7 @@ const documentSchema = new mongoose.Schema(
           enum: ["pending", "completed", "failed"],
           default: "pending",
         },
+
         error: {
           type: String,
           default: "",
@@ -162,6 +188,7 @@ const documentSchema = new mongoose.Schema(
           enum: ["pending", "completed", "failed"],
           default: "pending",
         },
+
         error: {
           type: String,
           default: "",
@@ -174,6 +201,20 @@ const documentSchema = new mongoose.Schema(
           enum: ["pending", "completed", "failed"],
           default: "pending",
         },
+
+        error: {
+          type: String,
+          default: "",
+        },
+      },
+
+      mindMap: {
+        status: {
+          type: String,
+          enum: ["pending", "completed", "failed"],
+          default: "pending",
+        },
+
         error: {
           type: String,
           default: "",
@@ -187,18 +228,18 @@ const documentSchema = new mongoose.Schema(
     },
 
     processingStatus: {
-  type: String,
-  enum: [
-    "pending",
-    "uploading",
-    "extracting",
-    "processing",
-    "partial",
-    "completed",
-    "failed",
-  ],
-  default: "pending",
-},
+      type: String,
+      enum: [
+        "pending",
+        "uploading",
+        "extracting",
+        "processing",
+        "partial",
+        "completed",
+        "failed",
+      ],
+      default: "pending",
+    },
 
     metadata: {
       type: mongoose.Schema.Types.Mixed,

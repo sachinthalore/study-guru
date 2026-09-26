@@ -5,6 +5,7 @@ import { generateDocumentSummary } from "./summary.service.js";
 import { generateDocumentNotes } from "./notes.service.js";
 import { generateDocumentQuiz } from "./quiz.service.js";
 import { generateDocumentFlashcards } from "./flashcards.service.js";
+import { generateDocumentMindMap } from "./mindMap.service.js";
 
 import { isGeminiQuotaError } from "../../utils/geminiRetry.js";
 import mongoose from "mongoose";
@@ -175,14 +176,54 @@ export const reprocessDocumentAI = async (documentId, userId) => {
     }
   }
 
+  if (!aiQuotaExceeded && shouldProcess(document.aiProcessing.mindMap.status)) {
+    try {
+      const mindMap = await generateDocumentMindMap(
+        document.extractedText
+      );
+
+      document.mindMap = mindMap;
+      document.aiProcessing.mindMap.status = "completed";
+      document.aiProcessing.mindMap.error = "";
+
+      await document.save();
+    } catch (error) {
+      console.error("AI Mind Map Reprocess Error:", error);
+
+      if (isGeminiQuotaError(error)) {
+        aiQuotaExceeded = true;
+
+        document.aiProcessing.mindMap.status = "failed";
+        document.aiProcessing.mindMap.error =
+          QUOTA_ERROR_MESSAGE;
+      } else {
+        document.aiProcessing.mindMap.status = "failed";
+        document.aiProcessing.mindMap.error =
+          error?.message || "Failed to regenerate mind map.";
+      }
+
+      await document.save();
+    }
+  } else if (
+    aiQuotaExceeded &&
+    shouldProcess(document.aiProcessing.mindMap.status)
+  ) {
+    document.aiProcessing.mindMap.status = "failed";
+    document.aiProcessing.mindMap.error =
+      QUOTA_ERROR_MESSAGE;
+
+    await document.save();
+  }
+
   /*
    * RE-CALCULATE FINAL AI STATUS
    */
   const allAIProcessed =
-    document.aiProcessing.summary.status === "completed" &&
-    document.aiProcessing.notes.status === "completed" &&
-    document.aiProcessing.quiz.status === "completed" &&
-    document.aiProcessing.flashcards.status === "completed";
+  document.aiProcessing.summary.status === "completed" &&
+  document.aiProcessing.notes.status === "completed" &&
+  document.aiProcessing.quiz.status === "completed" &&
+  document.aiProcessing.flashcards.status === "completed" &&
+  document.aiProcessing.mindMap.status === "completed";
 
   document.aiProcessed = allAIProcessed;
 

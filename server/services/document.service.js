@@ -10,6 +10,7 @@ import { generateDocumentFlashcards } from "./ai/flashcards.service.js";
 import { createDocumentChunks } from "./rag/chunk-storage.service.js";
 import { generateAndStoreDocumentEmbeddings } from "./rag/embedding-storage.service.js";
 import { isGeminiQuotaError } from "../utils/geminiRetry.js";
+import { generateDocumentMindMap } from "./ai/mindMap.service.js";
 
 export const uploadDocument = async (file, data, userId) => {
   const uploadResult = await new Promise((resolve, reject) => {
@@ -193,6 +194,41 @@ export const uploadDocument = async (file, data, userId) => {
       }
     }
 
+
+    if (aiQuotaExceeded) {
+      console.warn(
+        "Skipping AI Mind Map because Gemini quota is exhausted."
+      );
+
+      document.aiProcessing.mindMap.status = "failed";
+      document.aiProcessing.mindMap.error =
+        "AI service quota or rate limit reached. Please try again later.";
+
+      await document.save();
+    } else {
+      try {
+        const mindMap = await generateDocumentMindMap(extractedText);
+
+        document.mindMap = mindMap;
+        document.aiProcessing.mindMap.status = "completed";
+        document.aiProcessing.mindMap.error = "";
+
+        await document.save();
+      } catch (error) {
+        console.error("AI Mind Map Error:", error);
+
+        if (isGeminiQuotaError(error)) {
+          aiQuotaExceeded = true;
+        }
+
+        document.aiProcessing.mindMap.status = "failed";
+        document.aiProcessing.mindMap.error =
+          error?.message || "Failed to generate mind map.";
+
+        await document.save();
+      }
+    }
+
     // ==========================================
     // 7. FINAL AI PROCESSING STATUS
     // ==========================================
@@ -201,7 +237,8 @@ export const uploadDocument = async (file, data, userId) => {
   document.aiProcessing.summary.status === "completed" &&
   document.aiProcessing.notes.status === "completed" &&
   document.aiProcessing.quiz.status === "completed" &&
-  document.aiProcessing.flashcards.status === "completed";
+  document.aiProcessing.flashcards.status === "completed" &&
+  document.aiProcessing.mindMap.status === "completed";
 
 document.aiProcessed = allAIProcessed;
 

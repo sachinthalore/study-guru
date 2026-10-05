@@ -19,6 +19,7 @@ import quizRoutes from "./routes/quiz.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import studySessionRoutes from "./routes/studySession.routes.js";
 import flashcardRoutes from "./routes/flashcard.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
@@ -113,6 +114,8 @@ app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/study-sessions", studySessionRoutes);
 
 app.use("/api/v1/flashcards", flashcardRoutes);
+
+app.use("/api/v1/admin", adminRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({

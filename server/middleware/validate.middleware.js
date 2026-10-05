@@ -25,6 +25,10 @@ import {
   flashcardIdSchema,
 } from "../validators/flashcard.validator.js";
 
+import {
+  updateUserRoleSchema,
+} from "../validators/admin.validator.js";
+
 const promptSchema = z.object({
   prompt: z.string().min(1).max(1000),
 
@@ -236,5 +240,19 @@ export const validateFlashcardId = (req, res, next) => {
   }
 
   req.validatedData = result.data;
+  next();
+};
+
+export const validateUpdateUserRole = (req, res, next) => {
+  const validation = updateUserRoleSchema.safeParse(req.body);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      success: false,
+      error: validation.error,
+    });
+  }
+
+  req.validatedData = validation.data;
   next();
 };

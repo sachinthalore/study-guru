@@ -14,6 +14,8 @@ import {
   deleteDocumentController,
   reprocessDocumentAIController,
 } from "../controllers/document.controller.js";
+import { validateUploadedFileContent } from "../middleware/file-security.middleware.js";
+
 
 const router = Router();
 
@@ -21,9 +23,11 @@ router.post(
   "/upload",
   authenticate,
   upload.single("document"),
+  validateUploadedFileContent,
   validateUploadDocument,
   uploadDocumentController
 );
+
 router.get("/", authenticate, getAllDocuments);
 
 router.get("/:id", authenticate, getSingleDocument);

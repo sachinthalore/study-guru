@@ -4,6 +4,13 @@ export const errorHandler = (err, req, res, next) => {
   // Log complete error for developers
   logger.error(err.stack || err.message);
 
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({
+      success: false,
+      message: "File size exceeds the 20 MB limit.",
+    });
+  }
+
   const statusCode = err.statusCode || 500;
 
   let message = err.message || "Internal Server Error";

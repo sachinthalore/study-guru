@@ -2,6 +2,7 @@ import multer from "multer";
 import path from "path";
 import ApiError from "../utils/apiError.js";
 
+
 // Store file in memory (Cloudinary ke liye best)
 const storage = multer.memoryStorage();
 
@@ -28,16 +29,16 @@ const allowedMimeTypes = [
 ];
 
 const fileFilter = (req, file, cb) => {
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    return cb(null, true);
+  if (!allowedMimeTypes.includes(file.mimetype)) {
+    return cb(
+      new ApiError(
+        400,
+        `Unsupported file type: ${path.extname(file.originalname)}`
+      )
+    );
   }
 
-  cb(
-    new ApiError(
-      400,
-      `Unsupported file type: ${path.extname(file.originalname)}`
-    )
-  );
+  cb(null, true);
 };
 
 const upload = multer({

@@ -48,6 +48,12 @@ const documentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    
+    cloudinaryResourceType: {
+      type: String,
+      enum: ["image", "raw", "video"],
+      required: true,
+    },
 
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,

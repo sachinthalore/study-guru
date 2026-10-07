@@ -35,6 +35,7 @@ export const uploadDocument = async (file, data, userId) => {
     mimeType: file.mimetype,
     fileUrl: uploadResult.secure_url,
     publicId: uploadResult.public_id,
+    cloudinaryResourceType: uploadResult.resource_type,
     uploadedBy: userId,
     fileSize: file.size,
     processingStatus: "extracting",
@@ -301,7 +302,7 @@ export const updateDocument = async (id, userId, data) => {
   return document;
 };
 export const deleteDocument = async (id, userId) => {
-  const document = await Document.findOneAndDelete({
+  const document = await Document.findOne({
     _id: id,
     uploadedBy: userId,
   });
@@ -309,6 +310,28 @@ export const deleteDocument = async (id, userId) => {
   if (!document) {
     throw new ApiError(404, "Document not found.");
   }
+
+  const cloudinaryResult = await cloudinary.uploader.destroy(
+    document.publicId,
+    {
+      resource_type: document.cloudinaryResourceType,
+      invalidate: true,
+    }
+  );
+  
+  if (
+    cloudinaryResult.result !== "ok" &&
+    cloudinaryResult.result !== "not found"
+  ) {
+    throw new ApiError(
+      500,
+      "Failed to delete document from cloud storage."
+    );
+  }
+
+  await Document.deleteOne({
+    _id: document._id,
+  });
 
   return document;
 };

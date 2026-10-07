@@ -4,11 +4,14 @@ import env from "../config/env.js";
 const signToken = (payload, secret, expiresIn) => {
   return jwt.sign(payload, secret, {
     expiresIn,
+    algorithm: "HS256",
   });
 };
 
 const verifyToken = (token, secret) => {
-  return jwt.verify(token, secret);
+  return jwt.verify(token, secret, {
+    algorithms: ["HS256"],
+  });
 };
 
 export const generateAccessToken = (payload) =>

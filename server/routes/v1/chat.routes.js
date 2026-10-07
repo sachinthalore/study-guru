@@ -21,12 +21,15 @@ import {
   validateChatId,
 } from "../../middleware/validate.middleware.js";
 
+import { aiLimiter } from "../../middleware/rateLimit.middleware.js";
+
 const router = Router();
 
 // Normal AI Chat
 router.post(
   "/chat",
   authenticate,
+  aiLimiter,
   validatePrompt,
   chatWithAI
 );
@@ -35,6 +38,7 @@ router.post(
 router.post(
   "/document-chat",
   authenticate,
+  aiLimiter,
   validateDocumentChat,
   chatWithDocument
 );

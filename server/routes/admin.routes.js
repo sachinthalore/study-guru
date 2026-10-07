@@ -8,10 +8,11 @@ import {
 
 import { validateUpdateUserRole } from "../middleware/validate.middleware.js";
 import { updateUserRoleSchema } from "../validators/admin.validator.js";
-
+import { adminLimiter } from "../middleware/rateLimit.middleware.js";
 const router = Router();
 
 router.use(authenticate, authorize("admin"));
+router.use(adminLimiter);
 
 router.get("/users", getAllUsers);
 

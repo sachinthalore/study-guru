@@ -22,12 +22,27 @@ import {
     authenticate,
     authorize,
   } from "../middleware/auth.middleware.js";
+
+  import {
+    authLimiter,
+    passwordLimiter,
+  } from "../middleware/rateLimit.middleware.js";
   
 const router = Router();
 
-router.post("/register", validateRegister, register);
+router.post(
+  "/register",
+  authLimiter,
+  validateRegister,
+  register
+);
 
-router.post("/login", validateLogin, login);
+router.post(
+  "/login",
+  authLimiter,
+  validateLogin,
+  login
+);
 
 router.post(
   "/logout",
@@ -37,12 +52,14 @@ router.post(
 
 router.post(
   "/reset-password/:token",
+  passwordLimiter,
   validateResetPassword,
   resetPasswordController
 );
 
 router.post(
   "/forgot-password",
+  passwordLimiter,
   validateForgotPassword,
   forgotPasswordController
 ); 
@@ -50,11 +67,13 @@ router.post(
 router.post(
   "/send-verification",
   authenticate,
+  passwordLimiter,
   sendVerificationEmailController
 );
 
 router.get(
   "/verify-email/:token",
+  passwordLimiter,
   verifyEmailController
 );
 

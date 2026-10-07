@@ -5,6 +5,7 @@ import upload from "../middleware/upload.middleware.js";
 import {
   validateUploadDocument,
   validateUpdateDocument,
+  validateDocumentId,
 } from "../validators/document.validator.js";
 import {
   uploadDocumentController,
@@ -30,11 +31,17 @@ router.post(
 
 router.get("/", authenticate, getAllDocuments);
 
-router.get("/:id", authenticate, getSingleDocument);
+router.get(
+  "/:id",
+  authenticate,
+  validateDocumentId,
+  getSingleDocument
+);
 
 router.patch(
   "/:id",
   authenticate,
+  validateDocumentId,
   validateUpdateDocument,
   updateDocumentController
 );
@@ -42,12 +49,14 @@ router.patch(
 router.delete(
   "/:id",
   authenticate,
+  validateDocumentId,
   deleteDocumentController
 );
 
 router.post(
   "/:id/reprocess-ai",
   authenticate,
+  validateDocumentId,
   reprocessDocumentAIController
 );
 

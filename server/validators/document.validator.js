@@ -1,5 +1,24 @@
 import { z } from "zod";
 
+export const documentIdSchema = z.object({
+  id: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Invalid document ID."),
+});
+
+export const validateDocumentId = (req, res, next) => {
+  const result = documentIdSchema.safeParse(req.params);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      errors: result.error.flatten().fieldErrors,
+    });
+  }
+
+  next();
+};
+
 // Update Document Validation
 const updateDocumentSchema = z.object({
   title: z

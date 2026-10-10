@@ -27,7 +27,7 @@ export const forgotPassword = async (email) => {
 
   await user.save();
 
-  const resetURL = `${env.FRONTEND_URL}/reset-password/${resetToken}`;
+  const resetURL = `${env.FRONTEND_URL}/reset-password.html?token=${resetToken}`;
 
   await sendEmail({
     to: user.email,

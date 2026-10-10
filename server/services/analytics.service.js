@@ -7,6 +7,16 @@ import Flashcard from "../models/flashcard.model.js";
 import StudySession from "../models/studySession.model.js";
 
 export const getUserAnalytics = async (userId) => {
+  const now = new Date();
+
+  // Start of the current week: Monday, 00:00
+  const weekStart = new Date(now);
+  const day = weekStart.getDay();
+
+  const daysSinceMonday = (day + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+  weekStart.setHours(0, 0, 0, 0);
+
   const [
     totalDocuments,
     totalQuizzes,
@@ -16,6 +26,7 @@ export const getUserAnalytics = async (userId) => {
     totalFlashcards,
     totalChatMessages,
     studyStats,
+    weeklyStudyStats,
   ] = await Promise.all([
     Document.countDocuments({ uploadedBy: userId }),
 
@@ -48,6 +59,7 @@ export const getUserAnalytics = async (userId) => {
 
     Chat.countDocuments({ user: userId }),
 
+   // All-time study time
     StudySession.aggregate([
       {
         $match: {
@@ -61,11 +73,31 @@ export const getUserAnalytics = async (userId) => {
         },
       },
     ]),
+
+    // Current week's study time
+    StudySession.aggregate([
+      {
+        $match: {
+          user: userId,
+          endedAt: { $ne: null },
+          startedAt: { $gte: weekStart, $lte: now },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          weeklyStudyTime: { $sum: "$duration" },
+        },
+      },
+    ]),
+
   ]);
 
   const totalQuizQuestions = quizStats[0]?.totalQuestions || 0;
   const correctQuizAnswers = quizStats[0]?.correctAnswers || 0;
   const totalStudyTime = studyStats[0]?.totalStudyTime || 0;
+  const weeklyStudyTime =
+  weeklyStudyStats[0]?.weeklyStudyTime || 0;
 
   const quizAccuracy =
     totalQuizQuestions > 0
@@ -103,6 +135,7 @@ export const getUserAnalytics = async (userId) => {
     correctQuizAnswers,
     quizAccuracy,
     totalStudyTime,
+    weeklyStudyTime,
     totalNotes,
     totalFlashcards,
     totalChatMessages,

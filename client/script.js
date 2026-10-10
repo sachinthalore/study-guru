@@ -2,8 +2,55 @@
 /* Persistence: localStorage usage for uploaded notes metadata & parsed txt content.
    Notes structure: [{id,name,subject,type('txt'|'pdf'),content(optional for txt),size,uploadedAt}] */
 
+
+   const API_BASE_URL =
+   window.location.hostname === "localhost" ||
+   window.location.hostname === "127.0.0.1"
+     ? "http://localhost:3000"
+     : "";
+     async function apiRequest(endpoint, options = {}) {
+      const token = sessionStorage.getItem("accessToken");
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        cache: "no-store",
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong");
+      }
+
+      return data;
+    }
+
 const App = (function(){
   // DOM
+  const continueStudyBtn = document.getElementById('continueStudyBtn');
+  const homeLoginCard = document.getElementById('homeLoginCard');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPassword = document.getElementById('loginPassword');
+  const passwordToggle = document.getElementById("passwordToggle");
+  const loginBtn = document.getElementById('loginBtn');
+  const loginMessage = document.getElementById('loginMessage');
+  const loggedOutState = document.getElementById("loggedOutState");
+  const loggedInState = document.getElementById("loggedInState");
+  const welcomeUserName = document.getElementById("welcomeUserName");
+  const authNavLink = document.getElementById('authNavLink');
+  const studyTimeValue = document.getElementById("studyTimeValue");
+  const documentCountValue = document.getElementById("documentCountValue");
+  const quizCountValue = document.getElementById("quizCountValue");
+  const flashcardCountValue = document.getElementById("flashcardCountValue");
+  const progressPercent = document.getElementById("progressPercent");
+  const continueCourseTitle = document.getElementById("continueCourseTitle");
+  const progressDescription = document.getElementById("progressDescription");
+  const progressBar = document.getElementById("progressBar");
   const pages = document.querySelectorAll('.pages');
   const navLinks = document.querySelectorAll('.menu a');
   const dropZone = document.getElementById('dropZone');
@@ -25,7 +72,7 @@ const App = (function(){
   const genTest = document.getElementById('genTest');
   const testArea = document.getElementById('testArea');
   const profileSubjects = document.getElementById('profileSubjects');
-  const progressBar = document.getElementById('progressBar');
+
   const progressText = document.getElementById('progressText');
   const exportNotes = document.getElementById('exportNotes');
   const genKeywordsAll = document.getElementById('genKeywordsAll');
@@ -76,21 +123,174 @@ const App = (function(){
     });
   }
 
-  function gotoPage(page){
-    // toggle active nav
-    navLinks.forEach(a => a.classList.toggle('active', a.dataset.page === page));
-    // hide all pages and show target
-    document.querySelectorAll('.pages').forEach(p => p.classList.add('hide'));
-    const el = document.getElementById('page-' + page);
-    if(el) el.classList.remove('hide');
-    // small helpers
-    if(page === 'notes'){ /* focus upload area */ }
-    if(page === 'chat'){ chatInput.focus(); }
+  function gotoPage(page) {
+    navLinks.forEach(a =>
+      a.classList.toggle("active", a.dataset.page === page)
+    );
+
+    document.querySelectorAll(".pages").forEach(p => {
+      p.classList.add("hide");
+    });
+
+    const el = document.getElementById("page-" + page);
+
+    if (el) {
+      el.classList.remove("hide");
+    }
+
+
+
+    if (page === "chat") {
+      chatInput.focus();
+    }
   }
 
   function bindEvents(){
+
+    loginBtn.addEventListener('click', handleLogin);
+    // Open registration form
+const showRegisterBtn = document.getElementById("showRegisterBtn");
+const showLoginBtn = document.getElementById("showLoginBtn");
+const loggedOutState = document.getElementById("loggedOutState");
+const registerState = document.getElementById("registerState");
+const registerBtn = document.getElementById("registerBtn");
+const homeLogoutBtn = document.getElementById("homeLogoutBtn");
+const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+const continueLearningBtn = document.getElementById("continueLearningBtn");
+if (continueLearningBtn) {
+  continueLearningBtn.addEventListener("click", () => {
+    gotoPage("notes");
+  });
+}
+
+if (forgotPasswordBtn) {
+  forgotPasswordBtn.addEventListener("click", async () => {
+    const email = document.getElementById("loginEmail").value.trim();
+    const loginMessage = document.getElementById("loginMessage");
+
+    if (!email) {
+      loginMessage.textContent = "Please enter your email first.";
+      loginMessage.style.color = "red";
+      document.getElementById("loginEmail").focus();
+      return;
+    }
+
+    forgotPasswordBtn.disabled = true;
+    forgotPasswordBtn.textContent = "Sending...";
+
+    try {
+      const response = await apiRequest("/api/v1/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+
+      loginMessage.textContent =
+        response.message || "If the account exists, password reset instructions will be sent.";
+      loginMessage.style.color = "green";
+    } catch (error) {
+      loginMessage.textContent =
+        error.message || "Unable to process the password reset request.";
+      loginMessage.style.color = "red";
+    } finally {
+      forgotPasswordBtn.disabled = false;
+      forgotPasswordBtn.textContent = "Forgot?";
+    }
+  });
+}
+
+
+if (homeLogoutBtn) {
+  homeLogoutBtn.addEventListener("click", handleLogout);
+}
+if (registerBtn) {
+  registerBtn.addEventListener("click", handleRegister);
+}
+
+if (showRegisterBtn) {
+  showRegisterBtn.onclick = () => {
+    loggedOutState.style.display = "none";
+    registerState.style.display = "block";
+  };
+}
+
+if (showLoginBtn) {
+  showLoginBtn.onclick = () => {
+    registerState.style.display = "none";
+    loggedOutState.style.display = "block";
+  };
+}
+
+
+if (continueStudyBtn) {
+  continueStudyBtn.onclick = () => {
+    const token = sessionStorage.getItem("accessToken");
+    const user = sessionStorage.getItem("user");
+
+    const isLoggedIn = Boolean(token && user);
+
+    if (!isLoggedIn) {
+      homeLoginCard?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+
+      loginEmail?.focus();
+      return;
+    }
+
+    gotoPage("notes");
+  };
+}
+
+
+document.querySelectorAll("[data-password-target]").forEach((button) => {
+  button.onclick = () => {
+    const input = document.getElementById(
+      button.dataset.passwordTarget
+    );
+
+    if (!input) return;
+
+    const showPassword = input.type === "password";
+    input.type = showPassword ? "text" : "password";
+
+    button.textContent = showPassword ? "👁️" : "🙈";
+    button.setAttribute(
+      "aria-label",
+      showPassword ? "Hide password" : "Show password"
+    );
+    button.setAttribute(
+      "title",
+      showPassword ? "Hide password" : "Show password"
+    );
+  };
+});
+
+
+
+
+    if (passwordToggle && loginPassword) {
+      passwordToggle.onclick = () => {
+        if (loginPassword.type === "password") {
+          loginPassword.type = "text";
+
+          passwordToggle.textContent = "👁️";
+          passwordToggle.setAttribute("aria-label", "Hide password");
+          passwordToggle.setAttribute("title", "Hide password");
+        } else {
+          loginPassword.type = "password";
+
+          passwordToggle.textContent = "🙈";
+          passwordToggle.setAttribute("aria-label", "Show password");
+          passwordToggle.setAttribute("title", "Show password");
+        }
+      };
+    }
+
     // Hero button -> notes page
-    heroGetStarted.onclick = () => gotoPage('notes');
+    if (heroGetStarted) {
+      heroGetStarted.onclick = () => gotoPage("notes");
+    }
 
     // File pick
     pickFile.onclick = () => fileInput.click();
@@ -231,7 +431,7 @@ const App = (function(){
   function sendChat(){
     const q = chatInput.value.trim();
     if(!q) return;
-    
+
     // Append user's message
     appendMessage(q, 'user');
     chatInput.value = '';
@@ -250,13 +450,13 @@ const App = (function(){
           .filter(n => n.type === "txt" && n.content)
           .map(n => n.content)
           .join("\n\n");
-  
+
       if (!notesContent) {
           if (loaderMsg) loaderMsg.remove();
           appendMessage("No TXT notes found. Upload TXT files first.", "ai");
           return;
       }
-  
+
       prompt = q;
       mode = "notes";
   }else if (state.chatMode === "subject") {
@@ -282,38 +482,40 @@ const App = (function(){
     }
 
     // Send the prompt to the backend server
-    const API_URL =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
-    ? "http://localhost:3000"
-    : "";
 
-fetch(`${API_URL}/api/v1/chat`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+
+    apiRequest("/api/v1/chat", {
+      method: "POST",
+      body: JSON.stringify({
           prompt,
           mode,
           notesContent
-      }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(loaderMsg) loaderMsg.remove();
-        if (data.success) {
+      })
+  })
+  .then(data => {
+      if (loaderMsg) loaderMsg.remove();
+
+      if (data.success) {
           appendMessage(data.data.reply, "ai");
       } else {
-          appendMessage(data.message || "Sorry, something went wrong.", "ai");
+          appendMessage(
+              data.message || "Sorry, something went wrong.",
+              "ai"
+          );
       }
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-    })
-    .catch(error => {
-        if(loaderMsg) loaderMsg.remove();
-        console.error('Fetch error:', error);
-        appendMessage('Sorry, an error occurred while connecting to the server. Please check your network and Vercel logs.', 'ai');
-    });
+
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+  })
+  .catch(error => {
+      if (loaderMsg) loaderMsg.remove();
+
+      console.error("Chat error:", error);
+
+      appendMessage(
+          error.message || "Sorry, an error occurred while connecting to the server.",
+          "ai"
+      );
+  });
 }
 
   function appendMessage(text, who='ai', isLoader=false){
@@ -526,12 +728,282 @@ fetch(`${API_URL}/api/v1/chat`, {
     return Object.keys(freq).sort((a,b)=>freq[b]-freq[a]).slice(0,12);
   }
 
-  function updateProgress(){
-    // simple progress: percent = min(100, notes_count * 10)
-    const pct = Math.min(100, state.notes.length * 10);
-    progressBar.style.width = pct + '%';
-    progressText.textContent = pct + '% complete';
+
+function updateProgress() {
+  // Do not update the Home dashboard while logged out.
+  const isLoggedIn = Boolean(
+    sessionStorage.getItem("accessToken") &&
+    sessionStorage.getItem("user")
+  );
+
+  if (!isLoggedIn) {
+    if (progressPercent) progressPercent.textContent = "0%";
+    if (progressBar) progressBar.style.width = "0%";
+    return;
   }
+
+  // Keep legacy notes progress separate from Home dashboard.
+  // Home progress is managed by loadDashboardData().
+}
+
+
+  async function handleLogin() {
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+
+    if (!email || !password) {
+      loginMessage.textContent = "Please enter email and password.";
+      return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Logging in...";
+    loginMessage.textContent = "";
+
+    try {
+      const data = await apiRequest("/api/v1/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
+
+      sessionStorage.setItem("accessToken", data.data.accessToken);
+      sessionStorage.setItem("user", JSON.stringify(data.data.user));
+
+      updateHomeAuthState();
+
+      await loadDashboardData();
+
+
+
+      loginMessage.textContent = "Login successful.";
+      loginMessage.style.color = "green";
+
+      console.log("Logged in user:", data.data.user);
+
+    } catch (error) {
+      loginMessage.textContent = error.message;
+      loginMessage.style.color = "red";
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
+    }
+  }
+
+
+async function handleRegister() {
+  const fullName = document.getElementById("registerFullName").value.trim();
+  const email = document.getElementById("registerEmail").value.trim();
+  const password = document.getElementById("registerPassword").value;
+  const confirmPassword = document.getElementById("registerConfirmPassword").value;
+  const registerBtn = document.getElementById("registerBtn");
+  const registerMessage = document.getElementById("registerMessage");
+
+  if (!fullName || !email || !password || !confirmPassword) {
+    registerMessage.textContent = "Please fill in all fields.";
+    registerMessage.style.color = "red";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    registerMessage.textContent = "Passwords do not match.";
+    registerMessage.style.color = "red";
+    return;
+  }
+
+  registerBtn.disabled = true;
+  registerBtn.textContent = "Creating account...";
+  registerMessage.textContent = "";
+
+  try {
+    const response = await apiRequest("/api/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ fullName, email, password })
+    });
+
+    registerMessage.textContent =
+      response.message || "Account created successfully.";
+    registerMessage.style.color = "green";
+
+    // Switch back to Login after successful registration.
+    document.getElementById("registerState").style.display = "none";
+    document.getElementById("loggedOutState").style.display = "block";
+
+    document.getElementById("loginEmail").value = email;
+    document.getElementById("loginPassword").value = "";
+
+    document.getElementById("loginMessage").textContent =
+      "Account created. Please sign in.";
+    document.getElementById("loginMessage").style.color = "green";
+
+  } catch (error) {
+    registerMessage.textContent =
+      error.message || "Unable to create your account.";
+    registerMessage.style.color = "red";
+  } finally {
+    registerBtn.disabled = false;
+    registerBtn.textContent = "Create account";
+  }
+}
+
+
+
+function updateHomeAuthState() {
+  const token = sessionStorage.getItem("accessToken");
+  const userData = sessionStorage.getItem("user");
+
+  const isLoggedIn = Boolean(token && userData);
+
+  if (isLoggedIn) {
+    let user = {};
+
+    try {
+      user = JSON.parse(userData);
+    } catch (error) {
+      console.error("Invalid stored user data:", error);
+    }
+
+    loggedOutState.style.display = "none";
+    loggedInState.style.display = "block";
+
+    if (welcomeUserName) {
+      welcomeUserName.textContent =
+        `Welcome back, ${user.fullName || "Student"} 👋`;
+    }
+
+    // Load real analytics only after login.
+    loadDashboardData();
+    return;
+  }
+
+  // Logged-out state
+  loggedOutState.style.display = "block";
+  loggedInState.style.display = "none";
+
+  if (progressPercent) progressPercent.textContent = "0%";
+  if (progressBar) progressBar.style.width = "0%";
+
+  if (continueCourseTitle) {
+    continueCourseTitle.textContent = "Sign in to track your progress";
+  }
+
+  if (progressDescription) {
+    progressDescription.textContent =
+      "Your study time, documents, quizzes and flashcards will appear here.";
+  }
+
+  if (continueStudyBtn) {
+    continueStudyBtn.textContent = "Sign in to view progress →";
+  }
+
+  if (studyTimeValue) studyTimeValue.textContent = "0h 0m";
+  if (documentCountValue) documentCountValue.textContent = "0";
+  if (quizCountValue) quizCountValue.textContent = "0";
+  if (flashcardCountValue) flashcardCountValue.textContent = "0";
+}
+
+
+  async function handleLogout() {
+    try {
+      await apiRequest("/api/v1/auth/logout", {
+        method: "POST"
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      sessionStorage.removeItem("accessToken");
+      sessionStorage.removeItem("user");
+      updateHomeAuthState();
+
+      if (authNavLink) {
+        authNavLink.textContent = "Login";
+        authNavLink.dataset.page = "auth";
+      }
+
+      if (loginEmail) loginEmail.value = "";
+      if (loginPassword) loginPassword.value = "";
+      if (loginMessage) {
+        loginMessage.textContent = "Logged out successfully.";
+        loginMessage.style.color = "green";
+      }
+
+      console.log("User logged out");
+    }
+  }
+
+
+async function loadDashboardData() {
+  if (
+    !sessionStorage.getItem("accessToken") ||
+    !sessionStorage.getItem("user")
+  ) {
+    return;
+  }
+
+  try {
+    const response = await apiRequest("/api/v1/analytics");
+    const analytics = response.data;
+
+    // Update dashboard statistics
+    if (documentCountValue) {
+      documentCountValue.textContent = analytics.totalDocuments ?? 0;
+    }
+
+    if (quizCountValue) {
+      quizCountValue.textContent = analytics.completedQuizzes ?? 0;
+    }
+
+    if (flashcardCountValue) {
+      flashcardCountValue.textContent = analytics.totalFlashcards ?? 0;
+    }
+
+    if (studyTimeValue) {
+      const totalSeconds = Number(analytics.totalStudyTime) || 0;
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      studyTimeValue.textContent = `${hours}h ${minutes}m`;
+    }
+
+    const weeklyGoalSeconds = 5 * 60 * 60;
+
+const weeklySeconds = Number(analytics.weeklyStudyTime) || 0;
+
+const weeklyProgress = Math.min(
+  100,
+  Math.round((weeklySeconds / weeklyGoalSeconds) * 100)
+);
+
+if (progressPercent) {
+  progressPercent.textContent = `${weeklyProgress}%`;
+}
+
+if (progressBar) {
+  progressBar.style.width = `${weeklyProgress}%`;
+}
+
+if (continueCourseTitle) {
+  continueCourseTitle.textContent = "Your weekly study goal";
+}
+
+if (progressDescription) {
+  progressDescription.textContent =
+    "Build a consistent study habit, one session at a time.";
+}
+
+if (continueStudyBtn) {
+  continueStudyBtn.textContent = "Continue studying →";
+}
+
+
+  } catch (error) {
+    console.error("Dashboard analytics error:", error);
+  }
+}
+
 
   // ========== Utilities ==========
   function showToast(msg){

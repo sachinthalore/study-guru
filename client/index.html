@@ -17,6 +17,7 @@
         </div>
       </div>
       <div class="menu" id="navMenu">
+
         <a href="#" class="active" data-page="home">Home</a>
         <a href="#" data-page="notes">Notes</a>
         <a href="#" data-page="chat">Chat</a>
@@ -27,23 +28,463 @@
 
     <div class="main">
       <section class="card pages" id="page-home">
-        <div class="hero">
-          <div class="hero-left">
-            <div class="tag">Sachin — Your AI Study Guru</div>
-            <h1 class="h1">Your AI Study Guru — Focused study, smarter notes, instant tests.</h1>
-            <p class="lead">Chat with global knowledge or with only your uploaded notes. Create quick keywords, short notes and tests — all from your materials.</p>
-            <a class="btn" id="heroGetStarted">Get Started</a>
-          </div>
-          <div style="min-width:260px;display:flex;flex-direction:column;gap:12px;align-items:flex-end;">
-            <div style="background:linear-gradient(180deg,#FFFFFF,#F6FBFF);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.04);text-align:right;">
-              <div style="font-size:12px;color:var(--muted)">Progress</div>
-              <div style="font-weight:800;font-size:20px">Start by uploading notes</div>
-              <div style="margin-top:10px">Upload TXT or PDF (TXT parsed client-side; PDF stored as file placeholder).</div>
+
+        <!-- HERO -->
+        <div class="home-hero">
+
+          <div class="home-hero-content">
+
+            <div class="tag">
+              AI-powered learning workspace
             </div>
-            <div style="font-size:12px;color:var(--muted)">Tip: Use Subject folders to keep study focused.</div>
+
+            <h1 class="home-title">
+              Study smarter.
+              <span>Understand faster.</span>
+            </h1>
+
+            <p class="home-subtitle">
+              Upload your study material, ask questions, generate notes,
+              practice with AI quizzes, and track your learning — all in one place.
+            </p>
+
+
+
+            <div class="home-trust">
+              <span>✓ AI-powered</span>
+              <span>✓ Your study material</span>
+              <span>✓ Personalized learning</span>
+            </div>
+
           </div>
+
+
+
+          <!-- LOGIN CARD -->
+<div class="home-login-card" id="homeLoginCard">
+
+  <!-- LOGGED OUT -->
+  <div id="loggedOutState">
+
+    <div class="login-card-header">
+      <div class="login-icon">SG</div>
+
+      <div>
+        <h3>Welcome back</h3>
+        <p>Sign in to continue studying.</p>
+      </div>
+    </div>
+
+    <div class="login-field">
+      <label for="loginEmail">Email</label>
+
+      <input
+        type="email"
+        id="loginEmail"
+        placeholder="you@example.com"
+        autocomplete="email"
+      />
+    </div>
+
+    <div class="login-field">
+
+      <div class="login-label-row">
+        <label for="loginPassword">Password</label>
+
+        <button
+          type="button"
+          class="forgot-password"
+          id="forgotPasswordBtn"
+        >
+          Forgot?
+        </button>
+      </div>
+
+      <div class="password-input-wrap">
+
+        <input
+          type="password"
+          id="loginPassword"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+        />
+
+        <button
+          type="button"
+          class="password-toggle"
+          id="passwordToggle"
+          aria-label="Show password"
+          title="Show password"
+        >
+        🙈
+        </button>
+
+      </div>
+
+    </div>
+
+    <button class="login-submit" id="loginBtn">
+      Sign in
+    </button>
+
+    <div
+      id="loginMessage"
+      class="login-message"
+      aria-live="polite"
+    ></div>
+
+    <div class="login-divider">
+      <span>or</span>
+    </div>
+
+    <div class="login-register">
+      New to Study Guru?
+
+      <button
+        type="button"
+        id="showRegisterBtn"
+      >
+        Create account
+      </button>
+    </div>
+
+  </div>
+
+
+<!-- REGISTER STATE -->
+<div id="registerState" style="display: none;">
+
+  <div class="login-card-header">
+    <div class="login-icon">SG</div>
+    <div>
+      <h3>Create your account</h3>
+      <p>Start your personalized learning journey.</p>
+    </div>
+  </div>
+
+  <div class="login-field">
+    <label for="registerFullName">Full name</label>
+    <input
+      type="text"
+      id="registerFullName"
+      placeholder="Enter your full name"
+      autocomplete="name"
+      minlength="2"
+      maxlength="50"
+      required
+    />
+  </div>
+
+  <div class="login-field">
+    <label for="registerEmail">Email</label>
+    <input
+      type="email"
+      id="registerEmail"
+      placeholder="you@example.com"
+      autocomplete="email"
+      required
+    />
+  </div>
+
+
+<div class="login-field">
+  <label for="registerPassword">Password</label>
+
+  <div class="password-input-wrap">
+    <input
+      type="password"
+      id="registerPassword"
+      placeholder="Create a strong password"
+      autocomplete="new-password"
+      minlength="8"
+      maxlength="50"
+      required
+    />
+
+    <button
+      type="button"
+      class="password-toggle"
+      data-password-target="registerPassword"
+      aria-label="Show password"
+      title="Show password"
+    >🙈</button>
+  </div>
+
+  <small class="register-hint">
+    8–50 characters, including uppercase, lowercase and a number.
+  </small>
+</div>
+
+<div class="login-field">
+  <label for="registerConfirmPassword">Confirm password</label>
+
+  <div class="password-input-wrap">
+    <input
+      type="password"
+      id="registerConfirmPassword"
+      placeholder="Enter password again"
+      autocomplete="new-password"
+      required
+    />
+
+    <button
+      type="button"
+      class="password-toggle"
+      data-password-target="registerConfirmPassword"
+      aria-label="Show password"
+      title="Show password"
+    >🙈</button>
+  </div>
+</div>
+
+
+  <button class="login-submit" id="registerBtn" type="button">
+    Create account
+  </button>
+
+  <div
+    id="registerMessage"
+    class="login-message"
+    aria-live="polite"
+  ></div>
+
+  <div class="login-divider">
+    <span>or</span>
+  </div>
+
+  <div class="login-register">
+    Already have an account?
+    <button type="button" id="showLoginBtn">Sign in</button>
+  </div>
+
+</div>
+<!-- END REGISTER STATE -->
+
+
+
+  <!-- LOGGED IN -->
+  <div id="loggedInState" style="display:none;">
+
+    <div class="login-card-header">
+
+      <div class="login-icon">SG</div>
+
+      <div>
+        <h3 id="welcomeUserName">
+          Welcome back 👋
+        </h3>
+
+        <p>
+          You're ready to continue learning.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="logged-in-status">
+      <span class="status-dot"></span>
+      <span>You're signed in</span>
+    </div>
+
+    <button
+      class="login-submit"
+      id="continueLearningBtn"
+      type="button"
+    >
+      Continue studying →
+    </button>
+
+    <button
+      class="profile-logout-btn"
+      id="homeLogoutBtn"
+      type="button"
+    >
+      Sign out
+    </button>
+
+  </div>
+
+</div>
+</div>
+        <!-- DASHBOARD PREVIEW -->
+        <div class="home-section">
+
+          <div class="section-heading">
+            <div>
+              <span class="section-eyebrow">Your workspace</span>
+              <h2>Everything you need to learn</h2>
+            </div>
+
+            <span class="section-caption">
+              One place. One study workflow.
+            </span>
+          </div>
+
+
+          <div class="quick-actions">
+
+            <button class="feature-card" data-page-target="notes">
+              <div class="feature-icon">↑</div>
+
+              <div>
+                <h3>Upload Material</h3>
+                <p>
+                  Add PDFs, documents and study material.
+                </p>
+              </div>
+
+              <span class="feature-arrow">→</span>
+            </button>
+
+
+            <button class="feature-card" data-page-target="chat">
+              <div class="feature-icon">✦</div>
+
+              <div>
+                <h3>Ask Study Guru</h3>
+                <p>
+                  Ask questions and learn with AI.
+                </p>
+              </div>
+
+              <span class="feature-arrow">→</span>
+            </button>
+
+
+            <button class="feature-card" data-page-target="test">
+              <div class="feature-icon">✓</div>
+
+              <div>
+                <h3>Practice</h3>
+                <p>
+                  Generate AI-powered tests from your material.
+                </p>
+              </div>
+
+              <span class="feature-arrow">→</span>
+            </button>
+
+
+            <button class="feature-card">
+              <div class="feature-icon">✧</div>
+
+              <div>
+                <h3>AI Study Tools</h3>
+                <p>
+                  Notes, flashcards, summaries and mind maps.
+                </p>
+              </div>
+
+              <span class="feature-arrow">→</span>
+            </button>
+
+          </div>
+
         </div>
+
+
+        <!-- PROGRESS -->
+        <div class="home-section">
+
+          <div class="section-heading">
+            <div>
+              <span class="section-eyebrow">Your progress</span>
+              <h2>Keep your learning moving</h2>
+            </div>
+          </div>
+
+
+          <div class="progress-dashboard">
+
+            <div class="progress-main">
+
+              <div class="progress-main-top">
+                <div>
+                  <span class="progress-label">
+                    Continue learning
+                  </span>
+
+                  <h3 id="continueCourseTitle">Sign in to track your progress</h3>
+
+                  <p id="progressDescription">
+                    Your study time, documents, quizzes and flashcards
+                    will appear here.
+                  </p>
+
+                </div>
+
+                <div class="progress-percent" id="progressPercent">0%</div>
+              </div>
+
+              <div class="progress-track">
+                <span id="progressBar" style="width:0%"></span>
+              </div>
+
+              <button class="progress-action" id="continueStudyBtn">
+                Sign in to view progress →
+              </button>
+
+            </div>
+
+
+            <div class="stats-grid">
+
+              <div class="stat-card">
+                <span>Study time</span>
+                <strong id="studyTimeValue">0h 0m</strong>
+                <small>This week</small>
+              </div>
+
+              <div class="stat-card">
+                <span>Documents</span>
+                <strong id="documentCountValue">0</strong>
+                <small>Uploaded</small>
+              </div>
+
+              <div class="stat-card">
+                <span>Quizzes</span>
+                <strong id="quizCountValue">0</strong>
+                <small>Completed</small>
+              </div>
+
+              <div class="stat-card">
+                <span>Flashcards</span>
+                <strong id="flashcardCountValue">0</strong>
+                <small>Created</small>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- AI VALUE STRIP -->
+        <div class="ai-value-strip">
+
+          <div>
+            <span class="section-eyebrow">Built for focused learning</span>
+
+            <h2>
+              Turn your study material into an
+              <span>AI-powered learning system.</span>
+            </h2>
+          </div>
+
+          <div class="ai-value-points">
+            <span>Notes</span>
+            <span>Quiz</span>
+            <span>Flashcards</span>
+            <span>Mind Maps</span>
+            <span>AI Chat</span>
+          </div>
+
+        </div>
+
       </section>
+
+
 
       <section class="card pages hide" id="page-notes">
         <h3>Notes</h3>

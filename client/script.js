@@ -98,19 +98,26 @@ const App = (function(){
   };
 
   // Init
-  function init(){
-    // derive subjects from notes + default list
-    ['Computer','Science','Math','Other'].forEach(s => state.subjects.add(s));
-    state.notes.forEach(n => state.subjects.add(n.subject));
-    renderNav();
-    gotoPage('home');
-    bindEvents();
-    renderNotesList();
-    renderChatSubjects();
-    renderTestSubjectOptions();
-    renderProfileSubjects();
-    updateProgress();
-  }
+
+function init() {
+  // Derive subjects from notes + default list
+  ['Computer', 'Science', 'Math', 'Other'].forEach(s => state.subjects.add(s));
+  state.notes.forEach(n => state.subjects.add(n.subject));
+
+  renderNav();
+  bindEvents();
+  renderNotesList();
+  renderChatSubjects();
+  renderTestSubjectOptions();
+  renderProfileSubjects();
+
+  // Restore authentication UI after page reload
+  updateHomeAuthState();
+  updateProgress();
+
+  gotoPage('home');
+}
+
 
   // ========== Storage ==========
   function loadNotes(){

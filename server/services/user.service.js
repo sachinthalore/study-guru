@@ -16,7 +16,7 @@ export const updateCurrentUser = async (userId, data) => {
     userId,
     data,
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     }
   );

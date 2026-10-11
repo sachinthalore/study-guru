@@ -121,7 +121,7 @@ export const getUserAnalytics = async (userId) => {
     { user: userId },
     analyticsData,
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
       setDefaultsOnInsert: true,
     }

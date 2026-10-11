@@ -64,7 +64,7 @@ export const updateNote = async (noteId, userId, data) => {
     },
     data,
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     }
   ).populate("document", "title originalFileName");

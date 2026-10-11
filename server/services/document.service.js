@@ -327,7 +327,7 @@ export const updateDocument = async (id, userId, data) => {
     },
     data,
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     }
   );

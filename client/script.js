@@ -90,6 +90,24 @@ const App = (function(){
   const shortNotesAll = document.getElementById('shortNotesAll');
   const pickSubjectCreate = subjectSelect; // same element
   const toastEl = document.getElementById('toast');
+  const subjectsKey = 'studyguru_subjects_v1';
+
+function loadSubjects() {
+  try {
+    const raw = localStorage.getItem(subjectsKey);
+    return raw ? JSON.parse(raw) : [];
+  } catch (error) {
+    console.error("Failed to load subjects:", error);
+    return [];
+  }
+}
+
+function saveSubjects() {
+  localStorage.setItem(
+    subjectsKey,
+    JSON.stringify([...state.subjects])
+  );
+}
 
   let state = {
     notes: loadNotes(),
@@ -101,11 +119,18 @@ const App = (function(){
 
 function init() {
   // Derive subjects from notes + default list
-  ['Computer', 'Science', 'Math', 'Other'].forEach(s => state.subjects.add(s));
+  [
+    'Computer',
+    'Science',
+    'Math',
+    'Other',
+    ...loadSubjects()
+  ].forEach(subject => state.subjects.add(subject));
   state.notes.forEach(n => state.subjects.add(n.subject));
 
   renderNav();
   bindEvents();
+  renderUploadSubjectOptions();
   renderNotesList();
   renderChatSubjects();
   renderTestSubjectOptions();
@@ -377,11 +402,36 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
       if(f) handleFile(f);
     });
 
+    
     // Create new subject
     createSubjectBtn.onclick = () => {
-      const name = prompt('Enter new subject/folder name:');
-      if(name){ state.subjects.add(name); renderChatSubjects(); renderTestSubjectOptions(); renderProfileSubjects(); showToast('Subject created: ' + name); }
+      const name = prompt("Enter new subject/folder name:");
+      if (!name) return;
+
+      const subject = name.trim();
+      if (!subject) return;
+
+      const existing = [...state.subjects].find(
+        item => item.toLowerCase() === subject.toLowerCase()
+      );
+
+      if (existing) {
+        showToast("Subject already exists: " + existing);
+        return;
+      }
+
+      state.subjects.add(subject);
+      saveSubjects();
+
+      renderUploadSubjectOptions();
+      renderNotesList();
+      renderChatSubjects();
+      renderTestSubjectOptions();
+      renderProfileSubjects();
+
+      showToast("Subject created: " + subject);
     };
+
 
     // Chat tabs
     chatTabs.forEach(t => {
@@ -498,6 +548,33 @@ if (subjectCount) {
     showToast(error.message || "Document upload failed.");
   }
 }
+
+
+function renderUploadSubjectOptions() {
+  const subjectSelect = document.getElementById("subjectSelect");
+  if (!subjectSelect) return;
+
+  const previousValue = subjectSelect.value;
+
+  const subjects = [...new Set([
+    ...Array.from(state.subjects || []),
+    ...state.notes.map(note => note.subject).filter(Boolean)
+  ])].sort((a, b) => a.localeCompare(b));
+
+  subjectSelect.replaceChildren();
+
+  subjects.forEach(subject => {
+    const option = document.createElement("option");
+    option.value = subject;
+    option.textContent = subject;
+    subjectSelect.appendChild(option);
+  });
+
+  subjectSelect.value = subjects.includes(previousValue)
+    ? previousValue
+    : (subjects.includes("Other") ? "Other" : subjects[0] || "");
+}
+
 
 
 

@@ -8,27 +8,38 @@
    window.location.hostname === "127.0.0.1"
      ? "http://localhost:3000"
      : "";
-     async function apiRequest(endpoint, options = {}) {
-      const token = sessionStorage.getItem("accessToken");
 
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        cache: "no-store",
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(options.headers || {})
-        }
-      });
+async function apiRequest(endpoint, options = {}) {
+  const token = sessionStorage.getItem("accessToken");
+  const isFormData = options.body instanceof FormData;
 
-      const data = await response.json().catch(() => ({}));
+  const headers = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  };
 
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
-      }
+  // Let the browser set multipart boundaries for FormData.
+  if (isFormData) {
+    delete headers["Content-Type"];
+  }
 
-      return data;
-    }
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    cache: "no-store",
+    ...options,
+    headers
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || "Something went wrong");
+  }
+
+  return data;
+}
+
+
 
 const App = (function(){
   // DOM
@@ -124,6 +135,24 @@ const App = (function(){
   }
 
   function gotoPage(page) {
+
+  const protectedPages = ["notes", "chat", "test"];
+
+  if (protectedPages.includes(page)) {
+    const token = sessionStorage.getItem("accessToken");
+    const user = sessionStorage.getItem("user");
+
+    if (!token || !user) {
+      document.getElementById("homeLoginCard")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+
+      document.getElementById("loginEmail")?.focus();
+      return;
+    }
+  }
+
     navLinks.forEach(a =>
       a.classList.toggle("active", a.dataset.page === page)
     );
@@ -157,6 +186,15 @@ const registerBtn = document.getElementById("registerBtn");
 const homeLogoutBtn = document.getElementById("homeLogoutBtn");
 const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
 const continueLearningBtn = document.getElementById("continueLearningBtn");
+
+  // Home feature cards -> navigate to their target pages
+  document.querySelectorAll(".feature-card[data-page-target]").forEach((card) => {
+    card.addEventListener("click", () => {
+      const targetPage = card.dataset.pageTarget;
+      gotoPage(targetPage);
+    });
+  });
+
 if (continueLearningBtn) {
   continueLearningBtn.addEventListener("click", () => {
     gotoPage("notes");
@@ -293,11 +331,36 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
     }
 
     // File pick
+
+    // File pick — connect both upload buttons
     pickFile.onclick = () => fileInput.click();
+
+    document.getElementById("notesChooseFile")?.addEventListener("click", () => {
+      fileInput.click();
+    });
+
     fileInput.onchange = (e) => {
-      if(e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
-      fileInput.value = '';
+      if (e.target.files && e.target.files[0]) {
+        handleFile(e.target.files[0]);
+      }
+
+      fileInput.value = "";
     };
+
+
+    // Notes search and subject filter
+    const notesSearch = document.getElementById("notesSearch");
+    const notesSubjectFilter = document.getElementById("notesSubjectFilter");
+
+    notesSearch?.addEventListener("input", () => {
+      renderNotesList();
+    });
+
+    notesSubjectFilter?.addEventListener("change", () => {
+      renderNotesList();
+    });
+
+
 
     // Drag & drop
     ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, (e)=>{ e.preventDefault(); dropZone.classList.add('dragover'); }));
@@ -352,71 +415,285 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
   }
 
   // ========== File handling ==========
-  function handleFile(file){
-    const subject = subjectSelect.value || 'Other';
-    const id = 'n_' + Date.now();
-    const entry = { id, name:file.name, subject, type: file.name.toLowerCase().endsWith('.txt') ? 'txt' : 'pdf', size:file.size, uploadedAt: Date.now() };
-    if(entry.type === 'txt'){
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        entry.content = ev.target.result;
-        state.notes.push(entry);
-        state.subjects.add(subject);
-        saveNotes(); renderNotesList(); renderChatSubjects(); renderTestSubjectOptions(); renderProfileSubjects(); updateProgress();
-        showToast('TXT uploaded & parsed: ' + file.name);
-      };
-      reader.readAsText(file);
-    } else {
-      // PDF: we store metadata only (can't parse without libs)
-      state.notes.push(entry);
-      state.subjects.add(subject);
-      saveNotes(); renderNotesList(); renderChatSubjects(); renderTestSubjectOptions(); renderProfileSubjects(); updateProgress();
-      showToast('PDF uploaded (preview only): ' + file.name);
-    }
+
+async function handleFile(file) {
+  if (!file) return;
+
+  const token = sessionStorage.getItem("accessToken");
+
+  if (!token) {
+    showToast("Please log in before uploading a document.");
+    return;
   }
 
-  function renderNotesList(){
-    notesContainer.innerHTML = '';
-    if(state.notes.length === 0){
-      notesContainer.innerHTML = '<div style="color:var(--muted)">No notes yet. Upload TXT or PDF files to get started.</div>';
-      return;
-    }
-    state.notes.slice().reverse().forEach(n => {
-      const div = document.createElement('div');
-      div.className='note-item';
-      div.innerHTML = `
-        <div style="display:flex;align-items:center;">
-          <div class="subject-tag">${escapeHtml(n.subject)}</div>
-          <div>
-            <div style="font-weight:700">${escapeHtml(n.name)}</div>
-            <div style="font-size:12px;color:var(--muted)">${n.type.toUpperCase()} • ${new Date(n.uploadedAt).toLocaleString()}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="smallbtn" data-id="${n.id}" data-action="keywords">Keywords</button>
-          <button class="smallbtn" data-id="${n.id}" data-action="short" style="background:var(--accent-2)">Short</button>
-          <button style="padding:6px 8px;border-radius:8px;background:#F3F4F6;border:0;color:#374151" data-id="${n.id}" data-action="delete">Delete</button>
-        </div>
-      `;
-      notesContainer.appendChild(div);
-      // attach buttons
-      div.querySelector('[data-action="keywords"]').onclick = () => {
-        const k = generateKeywords(n);
-        showModal('Keywords — ' + n.name, k.join(', '));
-      };
-      div.querySelector('[data-action="short"]').onclick = () => {
-        const s = makeShortNotes(n);
-        showModal('Short Notes — ' + n.name, s);
-      };
-      div.querySelector('[data-action="delete"]').onclick = () => {
-        if(confirm('Delete note: ' + n.name + '?')){
-          state.notes = state.notes.filter(x => x.id !== n.id);
-          saveNotes(); renderNotesList(); renderChatSubjects(); renderTestSubjectOptions(); renderProfileSubjects(); updateProgress();
-          showToast('Deleted: ' + n.name);
-        }
-      };
-    });
+  const subject = subjectSelect.value || "Other";
+  const title = file.name.replace(/\.[^/.]+$/, "").trim().slice(0, 100);
+
+  if (title.length < 2) {
+    showToast("File name must contain at least 2 characters.");
+    return;
   }
+
+  const formData = new FormData();
+  formData.append("document", file);
+  formData.append("title", title);
+
+  try {
+    showToast("Uploading and processing: " + file.name);
+
+    const response = await apiRequest("/api/v1/documents/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const uploadedDocument = response.data;
+
+    const extension = file.name.split(".").pop().toLowerCase();
+
+    const entry = {
+      id: uploadedDocument._id,
+      name: uploadedDocument.originalFileName || file.name,
+      subject,
+      type: extension,
+      size: file.size,
+      uploadedAt: Date.now(),
+      documentId: uploadedDocument._id
+    };
+
+    if (["txt", "md", "csv"].includes(extension)) {
+      entry.content = await file.text();
+    }
+
+    state.notes.push(entry);
+    state.subjects.add(subject);
+
+    saveNotes();
+    renderNotesList();
+    renderChatSubjects();
+    renderTestSubjectOptions();
+    renderProfileSubjects();
+    updateProgress();
+
+    const documentCount = document.getElementById("notesDocumentCount");
+const subjectCount = document.getElementById("notesSubjectCount");
+
+if (documentCount) {
+  documentCount.textContent = state.notes.length;
+}
+
+if (subjectCount) {
+  subjectCount.textContent = state.subjects.size;
+}
+
+    showToast("Document uploaded successfully: " + entry.name);
+  } catch (error) {
+    console.error("Document upload error:", error);
+    showToast(error.message || "Document upload failed.");
+  }
+}
+
+
+
+function renderNotesList() {
+  const container = document.getElementById("notesContainer");
+  if (!container) return;
+
+  const searchInput = document.getElementById("notesSearch");
+  const subjectFilter = document.getElementById("notesSubjectFilter");
+
+  const searchTerm = (searchInput?.value || "").trim().toLowerCase();
+  const selectedSubject = subjectFilter?.value || "all";
+
+  // Update dashboard statistics
+  const documentCount = document.getElementById("notesDocumentCount");
+  const subjectCount = document.getElementById("notesSubjectCount");
+
+  if (documentCount) {
+    documentCount.textContent = state.notes.length;
+  }
+
+  if (subjectCount) {
+    subjectCount.textContent = state.subjects.size;
+  }
+
+  // Keep subject filter options synchronized
+  if (subjectFilter) {
+    const previousValue = subjectFilter.value || "all";
+    const subjects = [...new Set([
+      ...Array.from(state.subjects || []),
+      ...state.notes.map(note => note.subject).filter(Boolean)
+    ])].sort((a, b) => a.localeCompare(b));
+
+    console.log("Subjects:", [...state.subjects]);
+console.log("Notes:", state.notes);
+
+    subjectFilter.replaceChildren();
+
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.textContent = "All subjects";
+    subjectFilter.appendChild(allOption);
+
+    subjects.forEach(subject => {
+      const option = document.createElement("option");
+      option.value = subject;
+      option.textContent = subject;
+      subjectFilter.appendChild(option);
+    });
+
+    subjectFilter.value = subjects.includes(previousValue)
+      ? previousValue
+      : "all";
+  }
+
+  const activeSubject = subjectFilter?.value || "all";
+
+  // Search and filter documents
+  const filteredNotes = state.notes
+    .filter(note => {
+      const matchesSearch = [
+        note.name,
+        note.subject,
+        note.type
+      ].some(value =>
+        String(value || "").toLowerCase().includes(searchTerm)
+      );
+
+      const matchesSubject =
+        activeSubject === "all" || note.subject === activeSubject;
+
+      return matchesSearch && matchesSubject;
+    })
+    .slice()
+    .reverse();
+
+  container.replaceChildren();
+
+  if (filteredNotes.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "notes-empty-state";
+
+    const icon = document.createElement("div");
+    icon.className = "notes-empty-icon";
+    icon.textContent = "▤";
+
+    const heading = document.createElement("h4");
+    const message = document.createElement("p");
+
+    if (state.notes.length === 0) {
+      heading.textContent = "Your library starts here";
+      message.textContent =
+        "Upload your first document to keep your study materials together.";
+    } else {
+      heading.textContent = "No matching documents";
+      message.textContent =
+        "Try another search term or select a different subject.";
+    }
+
+    empty.append(icon, heading, message);
+    container.appendChild(empty);
+    return;
+  }
+
+  filteredNotes.forEach(note => {
+    const card = document.createElement("article");
+    card.className = "note-item";
+
+    const main = document.createElement("div");
+    main.className = "note-card-main";
+
+    const fileIcon = document.createElement("div");
+    fileIcon.className =
+      "note-file-icon " +
+      (note.type === "pdf" ? "pdf" : "txt");
+    fileIcon.textContent = note.type === "pdf" ? "PDF" : "TXT";
+
+    const details = document.createElement("div");
+    details.className = "note-card-details";
+
+    const title = document.createElement("h4");
+    title.className = "note-card-title";
+    title.textContent = note.name;
+
+    title.title = note.name;
+
+    const meta = document.createElement("p");
+    meta.className = "note-card-meta";
+
+    const uploadedAt = note.uploadedAt
+      ? new Date(note.uploadedAt).toLocaleDateString(undefined, {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })
+      : "Date unavailable";
+
+    const sizeText = Number.isFinite(note.size)
+      ? note.size < 1024 * 1024
+        ? `${Math.max(1, Math.round(note.size / 1024))} KB`
+        : `${(note.size / (1024 * 1024)).toFixed(1)} MB`
+      : "";
+
+    meta.textContent = [
+      note.type.toUpperCase(),
+      sizeText,
+      uploadedAt
+    ].filter(Boolean).join(" · ");
+
+    const subject = document.createElement("span");
+    subject.className = "subject-tag";
+    subject.textContent = note.subject || "Other";
+
+    details.append(title, meta, subject);
+    main.append(fileIcon, details);
+
+    const actions = document.createElement("div");
+    actions.className = "note-card-actions";
+
+    const keywordsBtn = document.createElement("button");
+    keywordsBtn.type = "button";
+    keywordsBtn.className = "notes-action-btn";
+    keywordsBtn.textContent = "Keywords";
+    keywordsBtn.addEventListener("click", () => {
+      const keywords = generateKeywords(note);
+      showModal("Keywords — " + note.name, keywords.join(", "));
+    });
+
+    const shortBtn = document.createElement("button");
+    shortBtn.type = "button";
+    shortBtn.className = "notes-action-btn";
+    shortBtn.textContent = "Short notes";
+    shortBtn.addEventListener("click", () => {
+      const shortNotes = makeShortNotes(note);
+      showModal("Short Notes — " + note.name, shortNotes);
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "notes-action-btn notes-delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm(`Delete note: ${note.name}?`)) return;
+
+      // This removes the local UI entry, as in the existing implementation.
+      state.notes = state.notes.filter(item => item.id !== note.id);
+
+      saveNotes();
+      renderNotesList();
+      renderChatSubjects();
+      renderTestSubjectOptions();
+      renderProfileSubjects();
+      updateProgress();
+
+      showToast("Removed from notes list: " + note.name);
+    });
+
+    actions.append(keywordsBtn, shortBtn, deleteBtn);
+    card.append(main, actions);
+    container.appendChild(card);
+  });
+}
+
 
   // ========== Chat: basic client-only "AI" behaviors ==========
   function renderChatSubjects(){

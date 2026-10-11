@@ -56,8 +56,45 @@ export const uploadDocument = async (file, data, userId) => {
     // 2. RAG PROCESSING
     // ==========================================
 
+
+    // ==========================================
+    // 2. RAG PROCESSING
+    // ==========================================
+
+    let embeddingsReady = false;
+
     await createDocumentChunks(document._id, extractedText);
-    await generateAndStoreDocumentEmbeddings(document._id);
+
+    try {
+      const embeddedChunks =
+        await generateAndStoreDocumentEmbeddings(document._id);
+
+      const totalChunks = await Document.countDocuments({
+        documentId: document._id,
+      });
+
+      embeddingsReady =
+        totalChunks > 0 && embeddedChunks.length === totalChunks;
+
+      if (!embeddingsReady) {
+        console.warn(
+          `Document ${document._id}: embeddings are incomplete.`
+        );
+      }
+    } catch (error) {
+      console.error("Document embedding processing failed:", error);
+
+      if (isGeminiQuotaError(error)) {
+        console.warn(
+          "Gemini quota exhausted. Continuing document processing without complete embeddings."
+        );
+      } else {
+        console.warn(
+          "Continuing document processing despite embedding failure."
+        );
+      }
+    }
+
 
     // ==========================================
     // 3. AI SUMMARY
@@ -318,7 +355,7 @@ export const deleteDocument = async (id, userId) => {
       invalidate: true,
     }
   );
-  
+
   if (
     cloudinaryResult.result !== "ok" &&
     cloudinaryResult.result !== "not found"

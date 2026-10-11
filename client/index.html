@@ -487,58 +487,157 @@
 
 
 
-      <section class="card pages hide" id="page-notes">
-        <h3>Notes</h3>
-        <div style="margin-top:12px" class="upload">
-          <div class="drop" id="dropZone">
-            <div>
-              <div style="font-weight:700;margin-bottom:6px">Drag & Drop your notes here</div>
-              <div style="color:var(--muted);font-size:13px">Supports .txt and .pdf (txt is parsed for generating keywords & tests)</div>
-              <div style="margin-top:10px">
-                <input type="file" id="fileInput" style="display:none" />
-                <button class="smallbtn" id="pickFile">Choose File</button>
-              </div>
-              <div style="margin-top:12px">
-                <label for="subjectSelect" style="font-size:13px;color:var(--muted);margin-right:8px">Subject:</label>
-                <select id="subjectSelect" style="padding:8px;border-radius:8px;border:1px solid #E6E9EE;">
-                  <option>Computer</option><option>Science</option><option>Math</option><option>Other</option>
-                </select>
-                <button class="smallbtn" id="createSubject" style="margin-left:8px;background:var(--accent-2)">New Folder</button>
-              </div>
-            </div>
-          </div>
 
-          <div class="notes-list">
-            <h4 style="margin:0 0 10px 0">Uploaded Notes</h4>
-            <div id="notesContainer" style="min-height:160px"></div>
-          </div>
+<section class="card pages hide notes-page" id="page-notes">
+  <div class="notes-header">
+    <div class="notes-heading">
+      <span class="notes-eyebrow">YOUR STUDY WORKSPACE</span>
+      <h2>My Notes</h2>
+      <p>All your study materials, organized in one place.</p>
+    </div>
+    <button class="notes-primary-btn" id="pickFile" type="button">
+      <span aria-hidden="true">＋</span> Upload notes
+    </button>
+  </div>
+
+  <div class="notes-stats">
+    <div class="notes-stat-card">
+      <div class="notes-stat-icon blue">▤</div>
+      <div>
+        <span class="notes-stat-label">My documents</span>
+        <strong id="notesDocumentCount">0</strong>
+      </div>
+    </div>
+
+    <div class="notes-stat-card">
+      <div class="notes-stat-icon green">▣</div>
+      <div>
+        <span class="notes-stat-label">My subjects</span>
+        <strong id="notesSubjectCount">0</strong>
+      </div>
+    </div>
+
+    <div class="notes-stat-card">
+      <div class="notes-stat-icon purple">✦</div>
+      <div>
+        <span class="notes-stat-label">Study smarter</span>
+        <strong>With AI</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes-workspace">
+    <div class="notes-upload-panel">
+      <div class="notes-section-heading">
+        <div>
+          <h3>Add study material</h3>
+          <p>Upload a file to organize your learning.</p>
         </div>
-      </section>
+      </div>
 
-      <section class="card pages hide" id="page-chat">
-        <h3>Chat</h3>
-        <div style="margin-top:10px">
-          <div class="tabs" role="tablist" aria-label="Chat modes">
-            <div class="tab active" data-mode="global">🌍 Global</div>
-            <div class="tab" data-mode="all">📒 All Notes</div>
-            <div class="tab" data-mode="subject">📂 Subject Specific</div>
-          </div>
+      <div class="notes-drop-zone" id="dropZone">
+        <div class="notes-upload-icon" aria-hidden="true">↑</div>
+        <h4>Drop your files here</h4>
+        <p>or choose a file from your device</p>
 
-          <div id="subjectChooser" style="margin-bottom:12px;display:none;">
-            <label style="font-size:13px;color:var(--muted);margin-right:8px">Choose subject:</label>
-            <select id="chatSubject" style="padding:8px;border-radius:8px;border:1px solid #E6E9EE;"></select>
-          </div>
 
-          <div class="chat-wrap">
-            <div class="messages" id="messages"></div>
+<input
+type="file"
+id="fileInput"
+accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv,.jpg,.jpeg,.png,.webp"
+hidden
+/>
 
-            <div class="chat-input">
-              <input id="chatInput" placeholder="Ask Study Guru..." />
-              <button class="sendbtn" id="sendBtn">Send</button>
-            </div>
-          </div>
+
+        <button class="notes-secondary-btn" id="notesChooseFile" type="button">
+          Choose file
+        </button>
+
+        <span class="notes-file-hint">
+          PDF, Word, PowerPoint, Excel, TXT, Markdown, CSV and images · Max 20 MB
+        </span>
+      </div>
+
+      <div class="notes-subject-field">
+        <label for="subjectSelect">Organize by subject</label>
+        <div class="notes-subject-controls">
+          <select id="subjectSelect">
+            <option>Computer</option>
+            <option>Science</option>
+            <option>Math</option>
+            <option>Other</option>
+          </select>
+          <button class="notes-folder-btn" id="createSubject" type="button">
+            + New folder
+          </button>
         </div>
-      </section>
+      </div>
+    </div>
+
+    <div class="notes-library-panel">
+      <div class="notes-library-heading">
+        <div>
+          <h3>Your documents</h3>
+          <p>Access your uploaded study material.</p>
+        </div>
+        <span class="notes-library-badge">My library</span>
+      </div>
+
+      <div class="notes-library-toolbar">
+        <label class="notes-search-box" for="notesSearch">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            id="notesSearch"
+            placeholder="Search your notes"
+            autocomplete="off"
+          />
+        </label>
+
+        <select id="notesSubjectFilter" aria-label="Filter notes by subject">
+          <option value="all">All subjects</option>
+        </select>
+      </div>
+
+      <div id="notesContainer" class="notes-container">
+        <div class="notes-empty-state">
+          <div class="notes-empty-icon" aria-hidden="true">▤</div>
+          <h4>Your library starts here</h4>
+          <p>Upload your first document to keep your study materials together.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="card pages hide" id="page-chat">
+  <h3>Chat</h3>
+
+  <div style="margin-top:10px">
+    <div class="tabs" role="tablist" aria-label="Chat modes">
+      <div class="tab active" data-mode="global">🌍 Global</div>
+      <div class="tab" data-mode="all">📒 All Notes</div>
+      <div class="tab" data-mode="subject">📂 Subject Specific</div>
+    </div>
+
+    <div id="subjectChooser" style="margin-bottom:12px;display:none">
+      <label for="chatSubject">Choose subject:</label>
+      <select id="chatSubject"></select>
+    </div>
+
+    <div class="chat-wrap">
+      <div class="messages" id="messages"></div>
+
+      <div class="chat-input">
+        <input id="chatInput" placeholder="Ask Study Guru..." />
+        <button class="sendbtn" id="sendBtn" type="button">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 
       <section class="card pages hide" id="page-test">
         <h3>Test Generator</h3>

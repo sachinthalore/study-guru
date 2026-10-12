@@ -30,6 +30,7 @@ export const uploadDocument = async (file, data, userId) => {
 
   const document = await Document.create({
     title: data.title,
+    subject: data.subject || "Other",
     originalFileName: file.originalname,
     fileType: file.originalname.split(".").pop().toLowerCase(),
     mimeType: file.mimetype,

@@ -1,42 +1,60 @@
+
 import mongoose from "mongoose";
 import DocumentChunk from "../../models/documentChunk.model.js";
 import { generateQueryEmbedding } from "./query-embedding.service.js";
 
 export const retrieveRelevantChunks = async (
   query,
-  documentId,
+  documentIds,
   limit = 5
 ) => {
   if (!query || !query.trim()) {
     throw new Error("Query is required.");
   }
 
-  if (!documentId) {
-    throw new Error("Document ID is required.");
+  if (!documentIds) {
+    throw new Error("Document ID(s) are required.");
   }
 
-  if (!mongoose.isValidObjectId(documentId)) {
-    throw new Error("Invalid document ID.");
+  // Support both one document ID and an array of IDs.
+  const ids = Array.isArray(documentIds)
+    ? documentIds
+    : [documentIds];
+
+  if (
+    ids.length === 0 ||
+    ids.some((id) => !mongoose.isValidObjectId(id))
+  ) {
+    throw new Error("Invalid document ID(s).");
   }
 
-  const queryEmbedding =
-    await generateQueryEmbedding(query);
+  const objectIds = ids.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
 
-  const results = await DocumentChunk.aggregate([
+  const safeLimit = Math.min(
+    10,
+    Math.max(1, Math.floor(Number(limit) || 5))
+  );
+
+  const queryEmbedding = await generateQueryEmbedding(query);
+
+  const documentFilter =
+    objectIds.length === 1
+      ? { $eq: objectIds[0] }
+      : { $in: objectIds };
+
+  return await DocumentChunk.aggregate([
     {
       $vectorSearch: {
         index: "document_vector_index",
         path: "embedding",
         queryVector: queryEmbedding,
         filter: {
-          documentId: {
-            $eq: new mongoose.Types.ObjectId(
-              documentId
-            ),
-          },
+          documentId: documentFilter,
         },
-        numCandidates: 10,
-        limit,
+        numCandidates: Math.max(50, safeLimit * 10),
+        limit: safeLimit,
       },
     },
     {
@@ -51,6 +69,4 @@ export const retrieveRelevantChunks = async (
       },
     },
   ]);
-
-  return results;
 };

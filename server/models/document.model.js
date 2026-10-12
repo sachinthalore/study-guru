@@ -8,6 +8,14 @@ const documentSchema = new mongoose.Schema(
       trim: true,
     },
 
+    subject: {
+      type: String,
+      trim: true,
+      default: "Other",
+      maxlength: 60,
+      index: true,
+    },
+
     originalFileName: {
       type: String,
       required: true,

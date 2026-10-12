@@ -611,27 +611,112 @@ hidden
 </section>
 
 
-<section class="card pages hide" id="page-chat">
-  <h3>Chat</h3>
-
-  <div style="margin-top:10px">
-    <div class="tabs" role="tablist" aria-label="Chat modes">
-      <div class="tab active" data-mode="global">🌍 Global</div>
-      <div class="tab" data-mode="all">📒 All Notes</div>
-      <div class="tab" data-mode="subject">📂 Subject Specific</div>
+<section class="card pages hide chat-page" id="page-chat">
+  <header class="chat-header">
+    <div class="chat-brand">
+      <div class="chat-brand-icon" aria-hidden="true">✦</div>
+      <div>
+        <h2>Study Guru AI</h2>
+        <p>Your personal AI study companion</p>
+      </div>
     </div>
 
-    <div id="subjectChooser" style="margin-bottom:12px;display:none">
-      <label for="chatSubject">Choose subject:</label>
+    <span class="chat-status">
+      <span class="status-dot"></span>
+      Ready to help
+    </span>
+  </header>
+
+  <div class="chat-toolbar">
+    <div class="tabs chat-tabs" role="tablist" aria-label="Chat modes">
+      <button class="tab active" type="button" data-mode="global"
+              role="tab" aria-selected="true">
+        <span aria-hidden="true">✦</span> Global
+      </button>
+
+      <button class="tab" type="button" data-mode="all"
+              role="tab" aria-selected="false">
+        <span aria-hidden="true">▤</span> All Notes
+      </button>
+
+      <button class="tab" type="button" data-mode="subject"
+              role="tab" aria-selected="false">
+        <span aria-hidden="true">▣</span> Subject Specific
+      </button>
+    </div>
+
+    <div id="subjectChooser" class="subject-chooser"
+         style="display:none">
+      <label for="chatSubject">Study subject</label>
       <select id="chatSubject"></select>
     </div>
+  </div>
 
-    <div class="chat-wrap">
-      <div class="messages" id="messages"></div>
+  <div class="chat-wrap">
+    <div class="messages" id="messages" aria-live="polite"
+         aria-label="Chat conversation">
 
-      <div class="chat-input">
-        <input id="chatInput" placeholder="Ask Study Guru..." />
-        <button class="sendbtn" id="sendBtn" type="button">Send</button>
+
+<div class="chat-welcome" id="chatWelcome">
+  <div class="welcome-icon" aria-hidden="true">✦</div>
+
+  <p class="welcome-eyebrow">YOUR AI LEARNING PARTNER</p>
+
+  <h3>What would you like to learn today?</h3>
+
+  <p class="welcome-description">
+    Understand difficult concepts, explore your study materials,
+    and prepare for exams with Study Guru AI.
+  </p>
+
+  <div class="chat-suggestions" aria-label="Suggested questions">
+    <button type="button" class="chat-suggestion"
+      data-prompt="Explain a difficult concept step by step">
+      <span aria-hidden="true">✦</span>
+      Explain a concept
+      <span aria-hidden="true">↗</span>
+    </button>
+
+    <button type="button" class="chat-suggestion"
+      data-prompt="Give me important exam questions with answers">
+      <span aria-hidden="true">▤</span>
+      Exam preparation
+      <span aria-hidden="true">↗</span>
+    </button>
+
+    <button type="button" class="chat-suggestion"
+      data-prompt="Create simple revision notes for my subject">
+      <span aria-hidden="true">▣</span>
+      Revision notes
+      <span aria-hidden="true">↗</span>
+    </button>
+  </div>
+</div>
+
+
+    </div>
+
+    <div class="chat-composer">
+      <div class="composer-box">
+        <input
+          id="chatInput"
+          type="text"
+          placeholder="Message Study Guru..."
+          aria-label="Message Study Guru"
+          autocomplete="off"
+        />
+
+        <div class="composer-footer">
+          <span class="composer-hint">
+            AI can make mistakes. Verify important information.
+          </span>
+
+          <button class="sendbtn" id="sendBtn" type="button"
+                  aria-label="Send message" title="Send message">
+            <span>Send</span>
+            <span aria-hidden="true">↑</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

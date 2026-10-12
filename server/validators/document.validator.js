@@ -46,13 +46,22 @@ export const validateUpdateDocument = (req, res, next) => {
 
 
 // Upload Document Validation
+
 const uploadDocumentSchema = z.object({
   title: z
     .string()
     .trim()
     .min(2, "Title must be at least 2 characters")
     .max(100, "Title must not exceed 100 characters"),
+
+  subject: z
+    .string()
+    .trim()
+    .min(1, "Subject is required")
+    .max(60, "Subject must not exceed 60 characters")
+    .default("Other"),
 });
+
 
 export const validateUploadDocument = (req, res, next) => {
   

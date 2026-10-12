@@ -29,15 +29,17 @@ import {
   updateUserRoleSchema,
 } from "../validators/admin.validator.js";
 
+
 const promptSchema = z.object({
-  prompt: z.string().min(1).max(1000),
+  prompt: z.string().trim().min(1).max(1000),
 
   chatId: z.string().optional(),
 
-  mode: z.string().optional(),
+  mode: z.enum(["global", "all", "subject"]).default("global"),
 
-  notesContent: z.string().optional(),
+  subject: z.string().trim().min(1).max(60).optional(),
 });
+
 
 const documentChatSchema = z.object({
   prompt: z.string().min(1).max(1000),

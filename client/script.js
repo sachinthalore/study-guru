@@ -113,6 +113,7 @@ function saveSubjects() {
     notes: loadNotes(),
     chatMode: 'global',
     subjects: new Set(),
+    serverSubjects: new Set(),
   };
 
   // Init
@@ -226,6 +227,17 @@ const continueLearningBtn = document.getElementById("continueLearningBtn");
       gotoPage(targetPage);
     });
   });
+
+
+document.querySelectorAll(".chat-suggestion").forEach(button => {
+  button.addEventListener("click", () => {
+    const prompt = button.dataset.prompt;
+    if (!prompt) return;
+
+    chatInput.value = prompt;
+    chatInput.focus();
+  });
+});
 
 if (continueLearningBtn) {
   continueLearningBtn.addEventListener("click", () => {
@@ -402,7 +414,7 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
       if(f) handleFile(f);
     });
 
-    
+
     // Create new subject
     createSubjectBtn.onclick = () => {
       const name = prompt("Enter new subject/folder name:");
@@ -493,6 +505,7 @@ async function handleFile(file) {
 
   const formData = new FormData();
   formData.append("document", file);
+  formData.append("subject", subject);
   formData.append("title", title);
 
   try {
@@ -504,6 +517,8 @@ async function handleFile(file) {
     });
 
     const uploadedDocument = response.data;
+    console.log("[UPLOAD] Selected subject:", subject);
+console.log("[UPLOAD] Saved subject:", uploadedDocument.subject);
 
     const extension = file.name.split(".").pop().toLowerCase();
 
@@ -523,6 +538,7 @@ async function handleFile(file) {
 
     state.notes.push(entry);
     state.subjects.add(subject);
+    state.serverSubjects.add(uploadedDocument.subject || subject);
 
     saveNotes();
     renderNotesList();
@@ -608,8 +624,7 @@ function renderNotesList() {
       ...state.notes.map(note => note.subject).filter(Boolean)
     ])].sort((a, b) => a.localeCompare(b));
 
-    console.log("Subjects:", [...state.subjects]);
-console.log("Notes:", state.notes);
+
 
     subjectFilter.replaceChildren();
 
@@ -779,113 +794,301 @@ console.log("Notes:", state.notes);
 }
 
 
-  // ========== Chat: basic client-only "AI" behaviors ==========
-  function renderChatSubjects(){
-    // populate chatSubject select
-    chatSubject.innerHTML = '';
-    Array.from(state.subjects).sort().forEach(s => {
-      const opt = document.createElement('option'); opt.value = s; opt.textContent = s;
-      chatSubject.appendChild(opt);
+async function loadServerDocuments() {
+  if (!sessionStorage.getItem("accessToken")) return;
+
+  try {
+    const response = await apiRequest("/api/v1/documents");
+    const documents = response.data || [];
+
+    state.serverSubjects = new Set(
+      documents
+        .map((doc) => doc.subject || "Other")
+        .filter(Boolean)
+    );
+
+    const existingNotes = new Map(
+      state.notes.map((note) => [
+        String(note.documentId || note.id || ""),
+        note,
+      ])
+    );
+
+    const serverNotes = documents.map((doc) => {
+      const id = String(doc._id);
+      const existing = existingNotes.get(id);
+
+      return {
+        ...existing,
+        id,
+        documentId: id,
+        name: doc.originalFileName || doc.title || "Uploaded document",
+        subject: doc.subject || "Other",
+        type: (doc.fileType || doc.originalFileName || doc.title || "")
+          .split(".")
+          .pop()
+          .toLowerCase(),
+        size: doc.fileSize ?? existing?.size ?? 0,
+        uploadedAt: doc.createdAt
+          ? new Date(doc.createdAt).getTime()
+          : existing?.uploadedAt ?? Date.now(),
+      };
     });
+
+    const serverIds = new Set(serverNotes.map((note) => note.documentId));
+
+    state.notes = [
+      ...serverNotes,
+      ...state.notes.filter(
+        (note) => !serverIds.has(String(note.documentId || note.id || ""))
+      ),
+    ];
+
+    for (const subject of state.serverSubjects) {
+      state.subjects.add(subject);
+    }
+
+    saveNotes();
+    renderNotesList();
+    renderChatSubjects();
+    renderTestSubjectOptions();
+    renderProfileSubjects();
+    updateProgress();
+  } catch (error) {
+    console.error("Server documents sync error:", error);
   }
-
-  function sendChat(){
-    const q = chatInput.value.trim();
-    if(!q) return;
-
-    // Append user's message
-    appendMessage(q, 'user');
-    chatInput.value = '';
-
-    // Append a loader for AI's response
-    appendMessage('...', 'ai', true);
-    const loaderMsg = messagesEl.lastElementChild;
-
-    // Determine the prompt based on chat mode
-    let prompt;
-    let mode;
-    let notesContent = "";
-    if (state.chatMode === "all") {
-
-      notesContent = state.notes
-          .filter(n => n.type === "txt" && n.content)
-          .map(n => n.content)
-          .join("\n\n");
-
-      if (!notesContent) {
-          if (loaderMsg) loaderMsg.remove();
-          appendMessage("No TXT notes found. Upload TXT files first.", "ai");
-          return;
-      }
-
-      prompt = q;
-      mode = "notes";
-  }else if (state.chatMode === "subject") {
-
-    const subj = chatSubject.value;
-
-    notesContent = state.notes
-        .filter(n => n.subject === subj && n.type === "txt" && n.content)
-        .map(n => n.content)
-        .join("\n\n");
-
-    if (!notesContent) {
-        if (loaderMsg) loaderMsg.remove();
-        appendMessage(`No TXT notes found for "${subj}".`, "ai");
-        return;
-    }
-
-    prompt = q;
-    mode = "notes";
-}else { // global mode
-        prompt = q;
-        mode = 'global';
-    }
-
-    // Send the prompt to the backend server
+}
 
 
-    apiRequest("/api/v1/chat", {
-      method: "POST",
-      body: JSON.stringify({
-          prompt,
-          mode,
-          notesContent
-      })
-  })
-  .then(data => {
-      if (loaderMsg) loaderMsg.remove();
 
-      if (data.success) {
-          appendMessage(data.data.reply, "ai");
-      } else {
-          appendMessage(
-              data.message || "Sorry, something went wrong.",
-              "ai"
-          );
-      }
+  // ========== Chat: basic client-only "AI" behaviors ==========
 
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-  })
-  .catch(error => {
-      if (loaderMsg) loaderMsg.remove();
+function renderChatSubjects(){
+  // populate chatSubject select
+  chatSubject.innerHTML = '';
 
-      console.error("Chat error:", error);
-
-      appendMessage(
-          error.message || "Sorry, an error occurred while connecting to the server.",
-          "ai"
-      );
+  (
+    sessionStorage.getItem("accessToken")
+      ? Array.from(state.serverSubjects)
+      : Array.from(state.subjects)
+  ).sort().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    chatSubject.appendChild(opt);
   });
 }
 
-  function appendMessage(text, who='ai', isLoader=false){
-    const d = document.createElement('div');
-    d.className = 'msg ' + (who==='user' ? 'user' : 'ai');
-    d.innerHTML = isLoader ? '<span class="loader"></span> Generating...' : escapeHtml(text).replace(/\n/g,'<br/>');
-    messagesEl.appendChild(d);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+
+function sendChat() {
+  const q = chatInput.value.trim();
+  if (!q) return;
+
+  const selectedMode = state.chatMode || "global";
+  const payload = { prompt: q, mode: "global" };
+
+  if (selectedMode === "all") {
+    payload.mode = "all";
+  } else if (selectedMode === "subject") {
+    const subject = chatSubject.value;
+
+    if (!subject) {
+      appendMessage("Please select a subject first.", "ai");
+      return;
+    }
+
+    payload.mode = "subject";
+    payload.subject = subject;
   }
+
+  appendMessage(q, "user");
+  chatInput.value = "";
+
+  appendMessage("...", "ai", true);
+  const loaderMsg = messagesEl.lastElementChild;
+
+  apiRequest("/api/v1/chat", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+    .then((data) => {
+      if (loaderMsg) loaderMsg.remove();
+
+      if (data.success) {
+        appendMessage(data.data.reply, "ai");
+      } else {
+        appendMessage(
+          data.message || "Sorry, something went wrong.",
+          "ai"
+        );
+      }
+
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    })
+    .catch((error) => {
+      if (loaderMsg) loaderMsg.remove();
+
+      console.error("Chat error:", error);
+      appendMessage(
+        error.message || "Sorry, an error occurred while connecting to the server.",
+        "ai"
+      );
+    });
+}
+
+
+function renderAIResponse(text) {
+  const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
+  const output = [];
+  let paragraph = [];
+  let listItems = [];
+  let listType = "";
+  let codeLines = [];
+  let inCodeBlock = false;
+
+  const inlineFormat = (line) => {
+    let html = escapeHtml(line);
+
+    // Inline code first, so its contents are not formatted as Markdown.
+    const codeParts = html.split(/(`[^`\n]+`)/g);
+    html = codeParts.map((part) => {
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return `<code>${part.slice(1, -1)}</code>`;
+      }
+
+      return part
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+    }).join("");
+
+    return html;
+  };
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+
+    output.push(
+      `<p>${paragraph.map(inlineFormat).join("<br>")}</p>`
+    );
+    paragraph = [];
+  };
+
+  const flushList = () => {
+    if (!listItems.length) return;
+
+    const tag = listType === "ordered" ? "ol" : "ul";
+    output.push(
+      `<${tag}>${listItems.map(item =>
+        `<li>${inlineFormat(item)}</li>`
+      ).join("")}</${tag}>`
+    );
+
+    listItems = [];
+    listType = "";
+  };
+
+  for (const line of lines) {
+    if (line.trim().startsWith("```")) {
+      flushParagraph();
+      flushList();
+
+      if (inCodeBlock) {
+        output.push(
+          `<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`
+        );
+        codeLines = [];
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+      }
+
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(line);
+      continue;
+    }
+
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+
+    if (heading) {
+      flushParagraph();
+      flushList();
+
+      const level = heading[1].length;
+      output.push(
+        `<h${level}>${inlineFormat(heading[2])}</h${level}>`
+      );
+      continue;
+    }
+
+    const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+    const unordered = trimmed.match(/^[-*+]\s+(.+)$/);
+
+    if (ordered || unordered) {
+      flushParagraph();
+
+      const nextType = ordered ? "ordered" : "unordered";
+
+      if (listType && listType !== nextType) {
+        flushList();
+      }
+
+      listType = nextType;
+      listItems.push((ordered || unordered)[1]);
+      continue;
+    }
+
+    flushList();
+    paragraph.push(trimmed);
+  }
+
+  if (inCodeBlock) {
+    output.push(
+      `<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`
+    );
+  }
+
+  flushParagraph();
+  flushList();
+
+  return output.join("");
+}
+
+function appendMessage(text, who = "ai", isLoader = false) {
+  const welcome = document.getElementById("chatWelcome");
+
+  if (welcome) {
+    welcome.remove();
+  }
+
+  const d = document.createElement("div");
+  d.className = "msg " + (who === "user" ? "user" : "ai");
+
+  if (isLoader) {
+    d.innerHTML = '<span class="loader"></span> Generating...';
+  } else if (who === "user") {
+    // User input is always displayed as plain, escaped text.
+    d.textContent = String(text ?? "");
+  } else {
+    d.innerHTML = renderAIResponse(text);
+  }
+
+  messagesEl.appendChild(d);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  return d;
+}
 
   // ========== Notes utilities: keywords & short notes ==========
   function tokenize(text){
@@ -1132,6 +1335,8 @@ function updateProgress() {
 
       sessionStorage.setItem("accessToken", data.data.accessToken);
       sessionStorage.setItem("user", JSON.stringify(data.data.user));
+
+      await loadServerDocuments();
 
       updateHomeAuthState();
 

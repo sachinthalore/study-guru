@@ -11,54 +11,48 @@ import asyncHandler from "../utils/asyncHandler.js";
 import logger from "../config/logger.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { generateRagAnswer } from "../services/rag/rag-answer.service.js";
+import { generateRagAnswerFromDocuments } from "../services/rag/rag-answer.service.js";
+
 
 export const chatWithAI = asyncHandler(async (req, res) => {
-  const {
-    prompt,
-    chatId,
-    mode,
-    notesContent,
-  } = req.validatedData;
+  const { prompt, chatId, mode = "global", subject } =
+    req.validatedData;
 
   const userId = req.user._id;
 
   let chat = null;
 
-  // Continue existing chat
   if (chatId) {
     chat = await getSingleChat(chatId, userId);
   }
 
-  let finalPrompt = prompt;
+  let text;
+  let totalTokens = 0;
 
-  if (mode === "notes" && notesContent) {
-    finalPrompt = `
-You are an AI Study Assistant.
-Use ONLY the notes below.
-If the answer is not found, reply exactly:
-"I couldn't find the answer in your notes."
+  if (mode === "all" || mode === "subject") {
+    if (mode === "subject" && !subject) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select a subject.",
+      });
+    }
 
-Notes:
-${notesContent}
+    const result = await generateRagAnswerFromDocuments(
+      prompt,
+      userId,
+      mode === "subject" ? subject : undefined
+    );
 
-Question:
-${prompt}
-`;
+    text = result.answer;
+  } else {
+    const history = chat ? chat.messages : [];
+
+    const result = await generateAIResponse(prompt, history);
+
+    text = result.text;
+    totalTokens = result.totalTokens;
   }
 
-  logger.info(
-    `Generating AI response | User: ${userId} | Chat: ${chat?._id || "new"} | Mode: ${mode || "global"}`
-  );
-
-  // Generate AI response BEFORE creating a new chat
-  const history = chat ? chat.messages : [];
-
-  const { text, totalTokens } = await generateAIResponse(
-    finalPrompt,
-    history
-  );
-
-  // Create new chat only after AI response succeeds
   if (!chat) {
     chat = await createChat(userId, {
       title: prompt.slice(0, 50),
@@ -70,28 +64,21 @@ ${prompt}
       totalTokens,
     });
   } else {
-    // Existing chat → append messages
     chat.messages.push({ role: "user", content: prompt });
-chat.messages.push({ role: "assistant", content: text });
-
-chat.totalTokens += totalTokens;
-
-await chat.save();
+    chat.messages.push({ role: "assistant", content: text });
+    chat.totalTokens += totalTokens;
+    await chat.save();
   }
 
   logger.info(
-    `AI response generated successfully | User: ${userId} | Chat: ${chat._id}`
+    `Chat response generated | User: ${userId} | Chat: ${chat._id} | Mode: ${mode}`
   );
 
   return res.status(200).json(
-    new ApiResponse(
-      true,
-      "AI response generated successfully.",
-      {
-        chatId: chat._id,
-        reply: text,
-      }
-    )
+    new ApiResponse(true, "AI response generated successfully.", {
+      chatId: chat._id,
+      reply: text,
+    })
   );
 });
 

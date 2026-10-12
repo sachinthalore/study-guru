@@ -5,7 +5,7 @@ import Chat from "../models/chat.model.js";
 import Document from "../models/document.model.js";
 import { generateContentWithRetry } from "../utils/geminiRetry.js";
 
-const GEMINI_MODEL = "gemini-3.8-flash";
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 export const generateAIResponse = async (
   prompt,

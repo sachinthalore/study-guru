@@ -863,21 +863,25 @@ async function loadServerDocuments() {
 
   // ========== Chat: basic client-only "AI" behaviors ==========
 
-function renderChatSubjects(){
-  // populate chatSubject select
-  chatSubject.innerHTML = '';
 
-  (
-    sessionStorage.getItem("accessToken")
-      ? Array.from(state.serverSubjects)
-      : Array.from(state.subjects)
-  ).sort().forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s;
-    opt.textContent = s;
+function renderChatSubjects() {
+  chatSubject.innerHTML = "";
+
+  const subjects = sessionStorage.getItem("accessToken")
+    ? Array.from(new Set([
+        ...state.serverSubjects,
+        ...state.subjects
+      ]))
+    : Array.from(state.subjects);
+
+  subjects.sort().forEach(subject => {
+    const opt = document.createElement("option");
+    opt.value = subject;
+    opt.textContent = subject;
     chatSubject.appendChild(opt);
   });
 }
+
 
 
 

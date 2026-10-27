@@ -6,6 +6,7 @@
 <title>Study Guru — AI Study Platform (Frontend)</title>
 <link rel="stylesheet" href="style.css" />
 <meta name="google-site-verification" content="mY_XMGelqh1K1qm07YzLSmYwuTeOUhWDQ6DRVSmbLM4" />
+<meta name="robots" content="noindex">
 </head>
 <body>
   <div class="container">
@@ -22,6 +23,7 @@
         <a href="#" class="active" data-page="home">Home</a>
         <a href="#" data-page="notes">Notes</a>
         <a href="#" data-page="chat">Chat</a>
+        <a href="#" data-page="study-tools">Study Tools</a>
         <a href="#" data-page="test">Test</a>
         <a href="#" data-page="profile">Profile</a>
       </div>
@@ -127,6 +129,8 @@
     <button class="login-submit" id="loginBtn">
       Sign in
     </button>
+
+    <p style="color: gray; font-size: 12px; text-align: center;">This is a student development project. Do not enter real passwords.</p>
 
     <div
       id="loginMessage"
@@ -242,6 +246,7 @@
   <button class="login-submit" id="registerBtn" type="button">
     Create account
   </button>
+  <p style="color: gray; font-size: 12px; text-align: center;">This is a student development project. Do not enter real passwords.</p>
 
   <div
     id="registerMessage"
@@ -366,7 +371,7 @@
             </button>
 
 
-            <button class="feature-card">
+            <button class="feature-card" data-page-target="study-tools">
               <div class="feature-icon">✧</div>
 
               <div>
@@ -720,6 +725,180 @@ hidden
       </div>
     </div>
   </div>
+</section>
+
+
+
+
+<!-- PREMIUM STUDY TOOLS PAGE -->
+<section class="card pages hide study-tools-page" id="page-study-tools">
+
+  <!-- Header -->
+  <header class="study-tools-header">
+    <div class="study-tools-heading">
+      <span class="study-tools-eyebrow">YOUR LEARNING WORKSPACE</span>
+
+      <h2>Study Tools</h2>
+
+      <p>
+        Turn your uploaded study material into useful revision resources.
+      </p>
+    </div>
+
+    <div class="study-tools-header-icon" aria-hidden="true">
+      ✦
+    </div>
+  </header>
+
+  <!-- Document Selection -->
+  <div class="study-tools-document-panel">
+    <div class="study-tools-panel-heading">
+      <div>
+        <span class="study-tools-label">GET STARTED</span>
+        <h3>Choose your study material</h3>
+        <p>Select an uploaded document to create personalized study resources.</p>
+      </div>
+
+      <span class="study-tools-document-icon" aria-hidden="true">▤</span>
+    </div>
+
+    <label for="studyToolsDocumentSelect">Select document</label>
+
+    <select id="studyToolsDocumentSelect">
+      <option value="">Choose a document...</option>
+    </select>
+
+    <p class="study-tools-help">
+      Your generated resources will be based on the selected document.
+    </p>
+  </div>
+
+  <!-- Study Tools -->
+  <div class="study-tools-section-heading">
+    <div>
+      <span class="study-tools-label">AI-POWERED LEARNING</span>
+      <h3>What would you like to create?</h3>
+    </div>
+    <span class="study-tools-count">4 STUDY TOOLS</span>
+  </div>
+
+  <div class="study-tools-grid">
+
+    <!-- Summary -->
+    <article class="study-tool-card summary-card">
+      <div class="study-tool-top">
+        <span class="study-tool-icon summary-icon" aria-hidden="true">▤</span>
+        <span class="study-tool-tag">REVIEW</span>
+      </div>
+
+      <h3>Summary</h3>
+
+      <p>
+        Understand the main ideas, important concepts, and key points from
+        your document.
+      </p>
+
+      <button
+        class="smallbtn study-tool-button"
+        type="button"
+        data-study-tool="summary"
+        disabled
+      >
+        Generate Summary <span aria-hidden="true">→</span>
+      </button>
+    </article>
+
+    <!-- Quiz -->
+    <article class="study-tool-card quiz-card">
+      <div class="study-tool-top">
+        <span class="study-tool-icon quiz-icon" aria-hidden="true">✓</span>
+        <span class="study-tool-tag">PRACTICE</span>
+      </div>
+
+      <h3>Quiz Generator</h3>
+
+      <p>
+        Test your understanding with questions created from your study
+        material.
+      </p>
+
+      <button
+        class="smallbtn study-tool-button"
+        type="button"
+        data-study-tool="quiz"
+        disabled
+      >
+        Generate Quiz <span aria-hidden="true">→</span>
+      </button>
+    </article>
+
+    <!-- Flashcards -->
+    <article class="study-tool-card flashcards-card">
+      <div class="study-tool-top">
+        <span class="study-tool-icon flashcard-icon" aria-hidden="true">▣</span>
+        <span class="study-tool-tag">MEMORIZE</span>
+      </div>
+
+      <h3>Flashcards</h3>
+
+      <p>
+        Revise definitions, key terms, and concepts with question-and-answer
+        cards.
+      </p>
+
+      <button
+        class="smallbtn study-tool-button"
+        type="button"
+        data-study-tool="flashcards"
+        disabled
+      >
+        Generate Flashcards <span aria-hidden="true">→</span>
+      </button>
+    </article>
+
+    <!-- Short Notes -->
+    <article class="study-tool-card short-notes-card">
+      <div class="study-tool-top">
+        <span class="study-tool-icon short-notes-icon" aria-hidden="true">✎</span>
+        <span class="study-tool-tag">QUICK REVISION</span>
+      </div>
+
+      <h3>Short Notes</h3>
+
+      <p>
+        Create concise revision notes to prepare efficiently for exams.
+      </p>
+
+      <button
+        class="smallbtn study-tool-button"
+        type="button"
+        data-study-tool="short-notes"
+        disabled
+      >
+        Generate Short Notes <span aria-hidden="true">→</span>
+      </button>
+    </article>
+
+  </div>
+
+  <!-- Results Area -->
+  <div
+    class="study-tools-result"
+    id="studyToolsResult"
+    aria-live="polite"
+  >
+    <div class="study-tools-result-icon" aria-hidden="true">✦</div>
+
+    <div>
+      <span class="study-tools-label">YOUR WORKSPACE</span>
+      <h3>Your study material will appear here</h3>
+      <p>
+        Choose a document to get started. The generation buttons will be
+        enabled after the existing backend integration is connected.
+      </p>
+    </div>
+  </div>
+
 </section>
 
 

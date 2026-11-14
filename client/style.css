@@ -1040,7 +1040,14 @@
   }
 
   .notes-page .notes-subject-controls select {
-    flex: 1;
+    flex: 0 0 160px;
+    width: 160px;
+    min-width: 160px;
+    box-sizing: border-box;
+  }
+  
+  .notes-page .notes-subject-controls .notes-folder-btn {
+    flex-shrink: 0;
   }
 
   .notes-page .notes-folder-btn {

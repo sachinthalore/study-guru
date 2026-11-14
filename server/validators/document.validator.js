@@ -27,7 +27,17 @@ const updateDocumentSchema = z.object({
     .min(2, "Title must be at least 2 characters")
     .max(100, "Title must not exceed 100 characters")
     .optional(),
-});
+
+  subject: z
+    .string()
+    .trim()
+    .min(1, "Subject is required")
+    .max(60, "Subject must not exceed 60 characters")
+    .optional(),
+}).refine(
+  data => Object.keys(data).length > 0,
+  { message: "At least one field is required." }
+);
 
 export const validateUpdateDocument = (req, res, next) => {
   const result = updateDocumentSchema.safeParse(req.body);

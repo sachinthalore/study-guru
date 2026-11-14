@@ -69,6 +69,7 @@ const App = (function(){
   const pickFile = document.getElementById('pickFile');
   const subjectSelect = document.getElementById('subjectSelect');
   const createSubjectBtn = document.getElementById('createSubject');
+  const manageSubjectsBtn = document.getElementById('manageSubjects');
   const notesContainer = document.getElementById('notesContainer');
   const notesKey = 'studyguru_notes_v1';
   const chatTabs = document.querySelectorAll('.tab');
@@ -100,24 +101,46 @@ const App = (function(){
   const shortNotesAll = document.getElementById('shortNotesAll');
   const pickSubjectCreate = subjectSelect; // same element
   const toastEl = document.getElementById('toast');
-  const subjectsKey = 'studyguru_subjects_v1';
 
-function loadSubjects() {
-  try {
-    const raw = localStorage.getItem(subjectsKey);
-    return raw ? JSON.parse(raw) : [];
-  } catch (error) {
-    console.error("Failed to load subjects:", error);
-    return [];
+  function getSubjectsKey() {
+    try {
+      const user = JSON.parse(
+        sessionStorage.getItem("user") || "null"
+      );
+  
+      const userId = user?._id || user?.id || user?.email;
+  
+      return userId
+        ? `studyguru_subjects_${encodeURIComponent(userId)}`
+        : null;
+    } catch {
+      return null;
+    }
   }
-}
-
-function saveSubjects() {
-  localStorage.setItem(
-    subjectsKey,
-    JSON.stringify([...state.subjects])
-  );
-}
+  
+  function loadSubjects() {
+    const key = getSubjectsKey();
+    if (!key) return [];
+  
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+      console.error("Failed to load subjects:", error);
+      return [];
+    }
+  }
+  
+  function saveSubjects() {
+    const key = getSubjectsKey();
+    if (!key) return;
+  
+    localStorage.setItem(
+      key,
+      JSON.stringify([...state.subjects])
+    );
+  }
+  let activeUploadController = null;
 
   let state = {
     notes: loadNotes(),
@@ -130,15 +153,34 @@ function saveSubjects() {
   // Init
 
 function init() {
-  // Derive subjects from notes + default list
+  
+// Restore private Notes data only for authenticated users.
+const isLoggedIn = Boolean(
+  sessionStorage.getItem("accessToken") &&
+  sessionStorage.getItem("user")
+);
+
+if (!isLoggedIn) {
+  state.notes = [];
+  state.subjects = new Set();
+  state.serverSubjects.clear();
+
+  // Remove unscoped browser caches to prevent account data leakage.
+  localStorage.removeItem(notesKey);
+  
+} else {
   [
-    'Computer',
-    'Science',
-    'Math',
-    'Other',
+    "Computer",
+    "Science",
+    "Math",
+    "Other",
     ...loadSubjects()
   ].forEach(subject => state.subjects.add(subject));
-  state.notes.forEach(n => state.subjects.add(n.subject));
+
+  state.notes.forEach(note => {
+    if (note.subject) state.subjects.add(note.subject);
+  });
+}
 
   renderNav();
   bindEvents();
@@ -387,20 +429,35 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
 
     // File pick
 
-    // File pick — connect both upload buttons
-    pickFile.onclick = () => fileInput.click();
+    // File pick — authentication protected
+function openFilePicker() {
+  const isLoggedIn = Boolean(
+    sessionStorage.getItem("accessToken") &&
+    sessionStorage.getItem("user")
+  );
 
-    document.getElementById("notesChooseFile")?.addEventListener("click", () => {
-      fileInput.click();
-    });
+  if (!isLoggedIn) {
+    showToast("Please log in before uploading a document.");
+    return;
+  }
 
-    fileInput.onchange = (e) => {
-      if (e.target.files && e.target.files[0]) {
-        handleFile(e.target.files[0]);
-      }
+  fileInput.click();
+}
 
-      fileInput.value = "";
-    };
+pickFile.onclick = openFilePicker;
+
+document.getElementById("notesChooseFile")?.addEventListener(
+  "click",
+  openFilePicker
+);
+
+fileInput.onchange = (e) => {
+  if (e.target.files && e.target.files[0]) {
+    handleFile(e.target.files[0]);
+  }
+
+  fileInput.value = "";
+};
 
 
     // Notes search and subject filter
@@ -428,6 +485,14 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
 
     // Create new subject
     createSubjectBtn.onclick = () => {
+      if (
+        !sessionStorage.getItem("accessToken") ||
+        !sessionStorage.getItem("user")
+      ) {
+        showToast("Please log in to create a folder.");
+        return;
+      }
+    
       const name = prompt("Enter new subject/folder name:");
       if (!name) return;
 
@@ -454,6 +519,136 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
 
       showToast("Subject created: " + subject);
     };
+
+    // Manage and delete custom folders
+manageSubjectsBtn.onclick = async () => {
+  if (
+    !sessionStorage.getItem("accessToken") ||
+    !sessionStorage.getItem("user")
+  ) {
+    showToast("Please log in to manage folders.");
+    return;
+  }
+
+  const defaultSubjects = [
+    "Computer",
+    "Science",
+    "Math",
+    "Other"
+  ];
+
+  const customSubjects = [...state.subjects]
+    .filter(subject => !defaultSubjects.includes(subject))
+    .sort((a, b) => a.localeCompare(b));
+
+  if (customSubjects.length === 0) {
+    showToast("No custom folders available to delete.");
+    return;
+  }
+
+  const folderList = customSubjects
+    .map((subject, index) => `${index + 1}. ${subject}`)
+    .join("\n");
+
+  const choice = prompt(
+    `Select a custom folder to delete:\n\n${folderList}\n\nEnter folder number:`
+  );
+
+  if (choice === null) return;
+
+  const selectedIndex = Number(choice) - 1;
+
+  if (
+    !Number.isInteger(selectedIndex) ||
+    selectedIndex < 0 ||
+    selectedIndex >= customSubjects.length
+  ) {
+    showToast("Invalid folder selection.");
+    return;
+  }
+
+  const folder = customSubjects[selectedIndex];
+
+  const documents = state.studyToolDocuments.filter(
+    doc => doc.subject === folder
+  );
+
+  let destination = null;
+
+  if (documents.length > 0) {
+    const availableSubjects = [...state.subjects]
+      .filter(subject => subject !== folder)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (availableSubjects.length === 0) {
+      showToast("Create another folder before deleting this folder.");
+      return;
+    }
+
+    const destinationList = availableSubjects
+      .map((subject, index) => `${index + 1}. ${subject}`)
+      .join("\n");
+
+    const destinationChoice = prompt(
+      `This folder contains ${documents.length} document(s).\n\nMove them to:\n\n${destinationList}\n\nEnter destination folder number:`
+    );
+
+    if (destinationChoice === null) return;
+
+    const destinationIndex = Number(destinationChoice) - 1;
+
+    if (
+      !Number.isInteger(destinationIndex) ||
+      destinationIndex < 0 ||
+      destinationIndex >= availableSubjects.length
+    ) {
+      showToast("Invalid destination selection.");
+      return;
+    }
+
+    destination = availableSubjects[destinationIndex];
+  }
+
+  const confirmed = confirm(
+    documents.length > 0
+      ? `Delete "${folder}" and move ${documents.length} document(s) to "${destination}"?`
+      : `Delete the folder "${folder}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    for (const doc of documents) {
+      await apiRequest(`/api/v1/documents/${doc._id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          subject: destination
+        })
+      });
+    }
+
+    state.subjects.delete(folder);
+    saveSubjects();
+
+    await loadServerDocuments();
+
+    renderUploadSubjectOptions();
+    renderNotesList();
+    renderChatSubjects();
+    renderTestSubjectOptions();
+    renderProfileSubjects();
+
+    showToast(`Folder "${folder}" deleted successfully.`);
+  } catch (error) {
+    console.error("Folder deletion error:", error);
+
+    await loadServerDocuments();
+
+    showToast(
+      "Folder could not be fully deleted. Please check your documents."
+    );
+  }
+};
 
 
     // Chat tabs
@@ -577,6 +772,8 @@ async function handleFile(file) {
   if (!file) return;
 
   const token = sessionStorage.getItem("accessToken");
+  const uploadController = new AbortController();
+activeUploadController = uploadController;
 
   if (!token) {
     showToast("Please log in before uploading a document.");
@@ -601,8 +798,18 @@ async function handleFile(file) {
 
     const response = await apiRequest("/api/v1/documents/upload", {
       method: "POST",
-      body: formData
+      body: formData,
+      signal: uploadController.signal
     });
+    
+    // Ignore responses belonging to an old login session.
+    if (
+      uploadController.signal.aborted ||
+      sessionStorage.getItem("accessToken") !== token ||
+      !sessionStorage.getItem("user")
+    ) {
+      return;
+    }
 
     const uploadedDocument = response.data;
     console.log("[UPLOAD] Selected subject:", subject);
@@ -656,14 +863,30 @@ if (documentCount) {
   documentCount.textContent = state.notes.length;
 }
 
+const isLoggedIn = Boolean(
+  sessionStorage.getItem("accessToken") &&
+  sessionStorage.getItem("user")
+);
+
 if (subjectCount) {
-  subjectCount.textContent = state.subjects.size;
+  subjectCount.textContent = isLoggedIn
+    ? state.subjects.size
+    : 0;
 }
 
     showToast("Document uploaded successfully: " + entry.name);
   } catch (error) {
+    if (error.name === "AbortError") {
+      console.log("Upload cancelled during logout.");
+      return;
+    }
+  
     console.error("Document upload error:", error);
     showToast(error.message || "Document upload failed.");
+  } finally {
+    if (activeUploadController === uploadController) {
+      activeUploadController = null;
+    }
   }
 }
 
@@ -671,6 +894,23 @@ if (subjectCount) {
 function renderUploadSubjectOptions() {
   const subjectSelect = document.getElementById("subjectSelect");
   if (!subjectSelect) return;
+  const isLoggedIn = Boolean(
+    sessionStorage.getItem("accessToken") &&
+    sessionStorage.getItem("user")
+  );
+  
+  if (!isLoggedIn) {
+    subjectSelect.replaceChildren();
+    subjectSelect.disabled = true;
+  
+    
+  
+    return;
+  }
+  
+  subjectSelect.disabled = false;
+  
+  
 
   const previousValue = subjectSelect.value;
 
@@ -715,7 +955,14 @@ function renderNotesList() {
   }
 
   if (subjectCount) {
-    subjectCount.textContent = state.subjects.size;
+    const isLoggedIn = Boolean(
+      sessionStorage.getItem("accessToken") &&
+      sessionStorage.getItem("user")
+    );
+  
+    subjectCount.textContent = isLoggedIn
+      ? state.subjects.size
+      : 0;
   }
 
   // Keep subject filter options synchronized
@@ -851,45 +1098,66 @@ function renderNotesList() {
     const actions = document.createElement("div");
     actions.className = "note-card-actions";
 
-    const keywordsBtn = document.createElement("button");
-    keywordsBtn.type = "button";
-    keywordsBtn.className = "notes-action-btn";
-    keywordsBtn.textContent = "Keywords";
-    keywordsBtn.addEventListener("click", () => {
-      const keywords = generateKeywords(note);
-      showModal("Keywords — " + note.name, keywords.join(", "));
-    });
+    
 
-    const shortBtn = document.createElement("button");
-    shortBtn.type = "button";
-    shortBtn.className = "notes-action-btn";
-    shortBtn.textContent = "Short notes";
-    shortBtn.addEventListener("click", () => {
-      const shortNotes = makeShortNotes(note);
-      showModal("Short Notes — " + note.name, shortNotes);
-    });
+    
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "notes-action-btn notes-delete-btn";
     deleteBtn.textContent = "Delete";
     deleteBtn.addEventListener("click", async () => {
-      if (!confirm(`Delete note: ${note.name}?`)) return;
-
-      // This removes the local UI entry, as in the existing implementation.
-      state.notes = state.notes.filter(item => item.id !== note.id);
-
-      saveNotes();
-      renderNotesList();
-      renderChatSubjects();
-      renderTestSubjectOptions();
-      renderProfileSubjects();
-      updateProgress();
-
-      showToast("Removed from notes list: " + note.name);
+      if (!sessionStorage.getItem("accessToken")) {
+        showToast("Please log in to delete documents.");
+        return;
+      }
+    
+      if (!confirm(`Permanently delete "${note.name}"?`)) return;
+    
+      const documentId = note.documentId || note.id;
+    
+      try {
+        if (!documentId) {
+          throw new Error("Document ID is missing.");
+        }
+    
+        await apiRequest(`/api/v1/documents/${documentId}`, {
+          method: "DELETE"
+        });
+    
+        state.notes = state.notes.filter(
+          item => String(item.documentId || item.id) !== String(documentId)
+        );
+    
+        state.studyToolDocuments = state.studyToolDocuments.filter(
+          doc => String(doc._id) !== String(documentId)
+        );
+    
+        state.serverSubjects = new Set(
+          state.studyToolDocuments
+            .map(doc => doc.subject || "Other")
+            .filter(Boolean)
+        );
+    
+        saveNotes();
+    
+        renderStudyToolsDocumentOptions();
+        renderUploadSubjectOptions();
+        renderNotesList();
+        renderChatSubjects();
+        renderTestSubjectOptions();
+        renderProfileSubjects();
+        updateProgress();
+    
+        showToast("Document permanently deleted: " + note.name);
+    
+      } catch (error) {
+        console.error("Document deletion error:", error);
+        showToast(error.message || "Failed to delete document.");
+      }
     });
 
-    actions.append(keywordsBtn, shortBtn, deleteBtn);
+    actions.append(deleteBtn);
     card.append(main, actions);
     container.appendChild(card);
   });
@@ -1933,9 +2201,25 @@ function updateProgress() {
       });
 
       sessionStorage.setItem("accessToken", data.data.accessToken);
-      sessionStorage.setItem("user", JSON.stringify(data.data.user));
+sessionStorage.setItem("user", JSON.stringify(data.data.user));
 
-      await loadServerDocuments();
+// Restore this account's saved folders.
+state.subjects = new Set([
+  "Computer",
+  "Science",
+  "Math",
+  "Other",
+  ...loadSubjects()
+]);
+
+// Reload the account's server documents.
+await loadServerDocuments();
+
+renderUploadSubjectOptions();
+renderNotesList();
+renderChatSubjects();
+renderTestSubjectOptions();
+renderProfileSubjects();
 
       updateHomeAuthState();
 
@@ -2070,11 +2354,17 @@ function updateHomeAuthState() {
 }
 
 
-  async function handleLogout() {
-    try {
-      await apiRequest("/api/v1/auth/logout", {
-        method: "POST"
-      });
+async function handleLogout() {
+  // Cancel any upload still running in the browser.
+  if (activeUploadController) {
+    activeUploadController.abort();
+    activeUploadController = null;
+  }
+
+  try {
+    await apiRequest("/api/v1/auth/logout", {
+      method: "POST"
+    });
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
@@ -2086,6 +2376,25 @@ sessionStorage.removeItem("currentPage");
 state.studyToolDocuments = [];
 
 renderStudyToolsDocumentOptions();
+
+
+// Clear the private Notes workspace on logout.
+state.notes = [];
+state.serverSubjects.clear();
+
+state.subjects = new Set();
+renderUploadSubjectOptions();
+// Remove browser caches; server documents remain untouched.
+localStorage.removeItem(notesKey);
+
+
+// Refresh all dependent UI sections.
+renderNotesList();
+renderChatSubjects();
+renderTestSubjectOptions();
+renderProfileSubjects();
+updateProgress();
+
 
 // Reset the Study Tools workspace.
 if (studyToolsResult) {

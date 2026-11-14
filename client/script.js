@@ -83,6 +83,16 @@ const App = (function(){
   const genTest = document.getElementById('genTest');
   const testArea = document.getElementById('testArea');
   const profileSubjects = document.getElementById('profileSubjects');
+    // Study Tools
+    const studyToolsDocumentSelect = document.getElementById(
+      "studyToolsDocumentSelect"
+    );
+
+    const studyToolsResult = document.getElementById("studyToolsResult");
+
+    const studyToolButtons = document.querySelectorAll(
+      "[data-study-tool]"
+    );
 
   const progressText = document.getElementById('progressText');
   const exportNotes = document.getElementById('exportNotes');
@@ -114,6 +124,7 @@ function saveSubjects() {
     chatMode: 'global',
     subjects: new Set(),
     serverSubjects: new Set(),
+    studyToolDocuments: [],
   };
 
   // Init
@@ -137,11 +148,25 @@ function init() {
   renderTestSubjectOptions();
   renderProfileSubjects();
 
-  // Restore authentication UI after page reload
-  updateHomeAuthState();
-  updateProgress();
+    // Restore authentication UI after page reload
+updateHomeAuthState();
 
-  gotoPage('home');
+// Reload server documents when a valid login session exists.
+if (
+  sessionStorage.getItem("accessToken") &&
+  sessionStorage.getItem("user")
+) {
+  loadServerDocuments();
+} else {
+  state.studyToolDocuments = [];
+  renderStudyToolsDocumentOptions();
+}
+
+updateProgress();
+
+const savedPage = sessionStorage.getItem("currentPage") || "home";
+
+gotoPage(savedPage);
 }
 
 
@@ -168,23 +193,9 @@ function init() {
   }
 
   function gotoPage(page) {
+    sessionStorage.setItem("currentPage", page);
 
-  const protectedPages = ["notes", "chat", "test"];
 
-  if (protectedPages.includes(page)) {
-    const token = sessionStorage.getItem("accessToken");
-    const user = sessionStorage.getItem("user");
-
-    if (!token || !user) {
-      document.getElementById("homeLoginCard")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-      });
-
-      document.getElementById("loginEmail")?.focus();
-      return;
-    }
-  }
 
     navLinks.forEach(a =>
       a.classList.toggle("active", a.dataset.page === page)
@@ -481,6 +492,83 @@ document.querySelectorAll("[data-password-target]").forEach((button) => {
       const summary = generateShortNotesAll();
       showModal('Short Notes (All Subjects)', summary);
     };
+
+    // Study Tools: document selection and generation
+    if (studyToolsDocumentSelect) {
+      studyToolsDocumentSelect.addEventListener("change", () => {
+        const hasDocument = Boolean(studyToolsDocumentSelect.value);
+
+        studyToolButtons.forEach((button) => {
+          button.disabled = false;
+        });
+
+        if (studyToolsResult) {
+          studyToolsResult.innerHTML = `
+            <div class="study-tools-result-icon" aria-hidden="true">✦</div>
+            <div>
+              <span class="study-tools-label">YOUR WORKSPACE</span>
+              <h3>${hasDocument ? "Ready to study" : "Choose a document"}</h3>
+              <p>${
+                hasDocument
+                  ? "Choose a study tool to generate or view saved material."
+                  : "Select an uploaded document to get started."
+              }</p>
+            </div>
+          `;
+        }
+      });
+    }
+
+    if (studyToolsDocumentSelect) {
+      studyToolsDocumentSelect.addEventListener("input", () => {
+        // Button remains clickable.
+        // Login and document validation happen in the click handler.
+        studyToolButtons.forEach((button) => {
+          button.disabled = false;
+        });
+      });
+    }
+
+    studyToolButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const documentId = studyToolsDocumentSelect?.value;
+        const selectedTool = button.dataset.studyTool;
+
+        // Check login first.
+        const isLoggedIn = Boolean(
+          sessionStorage.getItem("accessToken") &&
+          sessionStorage.getItem("user")
+        );
+
+        if (!isLoggedIn) {
+          showToast("Please log in to use Study Tools.");
+          return;
+        }
+
+        // Then check document selection.
+        if (!documentId || !selectedTool) {
+          showToast("Please select a document first.");
+          return;
+        }
+
+        const resourceMap = {
+          summary: "summary",
+          quiz: "quiz",
+          flashcards: "flashcards",
+          "short-notes": "notes",
+        };
+
+        const resource = resourceMap[selectedTool];
+
+        if (!resource) {
+          showToast("Unsupported study tool.");
+          return;
+        }
+
+        await generateStudyToolResource(documentId, resource, false);
+      });
+    });
+
   }
 
   // ========== File handling ==========
@@ -539,6 +627,20 @@ console.log("[UPLOAD] Saved subject:", uploadedDocument.subject);
     state.notes.push(entry);
     state.subjects.add(subject);
     state.serverSubjects.add(uploadedDocument.subject || subject);
+    const uploadedDocumentExists = state.studyToolDocuments.some(
+      (doc) => String(doc._id) === String(uploadedDocument._id)
+    );
+
+    if (!uploadedDocumentExists) {
+      state.studyToolDocuments.push(uploadedDocument);
+    }
+
+    renderStudyToolsDocumentOptions();
+
+    if (studyToolsDocumentSelect) {
+      studyToolsDocumentSelect.value = String(uploadedDocument._id);
+      studyToolsDocumentSelect.dispatchEvent(new Event("change"));
+    }
 
     saveNotes();
     renderNotesList();
@@ -800,6 +902,8 @@ async function loadServerDocuments() {
   try {
     const response = await apiRequest("/api/v1/documents");
     const documents = response.data || [];
+    state.studyToolDocuments = documents;
+    renderStudyToolsDocumentOptions();
 
     state.serverSubjects = new Set(
       documents
@@ -858,6 +962,497 @@ async function loadServerDocuments() {
     console.error("Server documents sync error:", error);
   }
 }
+
+
+function renderStudyToolsDocumentOptions() {
+  if (!studyToolsDocumentSelect) return;
+
+  const isLoggedIn = Boolean(
+    sessionStorage.getItem("accessToken") &&
+    sessionStorage.getItem("user")
+  );
+
+  const previousValue = studyToolsDocumentSelect.value;
+
+  studyToolsDocumentSelect.replaceChildren();
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choose a document...";
+  studyToolsDocumentSelect.appendChild(placeholder);
+
+  // Never show existing documents to logged-out users.
+  if (!isLoggedIn) {
+    studyToolButtons.forEach((button) => {
+      button.disabled = false;
+    });
+    return;
+  }
+
+  state.studyToolDocuments.forEach((doc) => {
+    const option = document.createElement("option");
+    option.value = String(doc._id);
+    option.textContent =
+      doc.originalFileName || doc.title || "Uploaded document";
+
+    studyToolsDocumentSelect.appendChild(option);
+  });
+
+  const hasPreviousSelection = state.studyToolDocuments.some(
+    (doc) => String(doc._id) === previousValue
+  );
+
+  studyToolsDocumentSelect.value = hasPreviousSelection
+    ? previousValue
+    : "";
+
+  const hasDocument = Boolean(studyToolsDocumentSelect.value);
+
+  studyToolButtons.forEach((button) => {
+    button.disabled = false;
+  });
+}
+
+
+
+function renderStudyToolResult(resource, result, cached, documentId) {
+  if (!studyToolsResult) return;
+
+  const resourceTitles = {
+    summary: "Summary",
+    notes: "Short Notes",
+    quiz: "Quiz",
+    flashcards: "Flashcards",
+  };
+
+  const container = document.createElement("div");
+  const label = document.createElement("span");
+  label.className = "study-tools-label";
+  label.textContent = cached ? "SAVED STUDY MATERIAL" : "GENERATED STUDY MATERIAL";
+
+  const heading = document.createElement("h3");
+  heading.textContent = resourceTitles[resource] || "Study Material";
+
+  const content = document.createElement("div");
+  content.className = "study-tools-output";
+
+  const addText = (parent, tag, text) => {
+    const element = document.createElement(tag);
+    element.textContent = String(text ?? "");
+    parent.appendChild(element);
+    return element;
+  };
+
+  if (typeof result === "string") {
+    const text = document.createElement("div");
+    text.className = "study-tools-markdown";
+
+    if (window.marked && window.DOMPurify) {
+      const markdownHtml = window.marked.parse(result);
+
+      text.innerHTML = window.DOMPurify.sanitize(markdownHtml);
+    } else {
+      // Safe fallback if libraries are unavailable.
+      text.textContent = result;
+      text.style.whiteSpace = "pre-wrap";
+    }
+
+    content.appendChild(text);
+  }else if (resource === "quiz" && Array.isArray(result)) {
+    result.forEach((question, index) => {
+      const item = document.createElement("article");
+      item.className = "study-tool-output-item";
+
+      addText(item, "h4", `${index + 1}. ${question.question}`);
+
+      if (Array.isArray(question.options)) {
+        const options = document.createElement("ol");
+        options.type = "A";
+
+        question.options.forEach((option) => {
+          addText(options, "li", option);
+        });
+
+        item.appendChild(options);
+      }
+
+      if (question.correctAnswer != null || question.explanation) {
+        const answerPanel = document.createElement("div");
+        answerPanel.className = "study-tool-answer-panel";
+        answerPanel.hidden = true;
+
+        if (question.correctAnswer != null) {
+          const answer = document.createElement("p");
+          answer.className = "study-tool-correct-answer";
+          answer.textContent = `Correct Answer: ${question.correctAnswer}`;
+          answerPanel.appendChild(answer);
+        }
+
+        if (question.explanation) {
+          const explanation = document.createElement("p");
+          explanation.className = "study-tool-explanation";
+          explanation.textContent = `Explanation: ${question.explanation}`;
+          answerPanel.appendChild(explanation);
+        }
+
+        const revealButton = document.createElement("button");
+        revealButton.type = "button";
+        revealButton.className = "smallbtn study-tool-reveal-button";
+        revealButton.textContent = "Reveal Answer";
+
+        revealButton.addEventListener("click", () => {
+          answerPanel.hidden = !answerPanel.hidden;
+
+          revealButton.textContent = answerPanel.hidden
+            ? "Reveal Answer"
+            : "Hide Answer";
+        });
+
+        item.append(revealButton, answerPanel);
+      }
+
+      content.appendChild(item);
+    });
+
+  } else if (resource === "flashcards" && Array.isArray(result)) {
+    const cards = result
+      .filter(card => card && card.question != null && card.answer != null)
+      .map(card => ({
+        question: String(card.question),
+        answer: String(card.answer),
+        status: null
+      }));
+
+    if (!cards.length) {
+      addText(content, "p", "No flashcards are available for this document.");
+    } else {
+      let currentIndex = 0;
+      let isFlipped = false;
+
+      const session = document.createElement("div");
+      session.className = "flashcard-session";
+
+      const topBar = document.createElement("div");
+      topBar.className = "flashcard-topbar";
+
+      const category = document.createElement("span");
+      category.className = "flashcard-category";
+      category.textContent = "ACTIVE RECALL";
+
+      const counter = document.createElement("span");
+      counter.className = "flashcard-counter";
+
+      topBar.append(category, counter);
+
+      const progressTrack = document.createElement("div");
+      progressTrack.className = "flashcard-progress-track";
+
+      const progressFill = document.createElement("div");
+      progressFill.className = "flashcard-progress-fill";
+      progressTrack.appendChild(progressFill);
+
+
+const stage = document.createElement("div");
+stage.className = "flashcard-stage";
+
+const cardFace = document.createElement("button");
+cardFace.type = "button";
+cardFace.className = "flashcard-face";
+cardFace.setAttribute("aria-label", "Reveal flashcard answer");
+
+const cardInner = document.createElement("span");
+cardInner.className = "flashcard-inner";
+
+const frontFace = document.createElement("span");
+frontFace.className = "flashcard-side flashcard-front";
+
+const frontLabel = document.createElement("span");
+frontLabel.className = "flashcard-face-label";
+frontLabel.textContent = "QUESTION · FRONT";
+
+const frontText = document.createElement("span");
+frontText.className = "flashcard-face-text";
+
+const frontHint = document.createElement("span");
+frontHint.className = "flashcard-face-hint";
+frontHint.textContent = "Tap to reveal answer";
+
+frontFace.append(frontLabel, frontText, frontHint);
+
+const backFace = document.createElement("span");
+backFace.className = "flashcard-side flashcard-back";
+
+const backLabel = document.createElement("span");
+backLabel.className = "flashcard-face-label";
+backLabel.textContent = "ANSWER · BACK";
+
+const backText = document.createElement("span");
+backText.className = "flashcard-face-text";
+
+const backHint = document.createElement("span");
+backHint.className = "flashcard-face-hint";
+backHint.textContent = "How well did you remember?";
+
+backFace.append(backLabel, backText, backHint);
+
+cardInner.append(frontFace, backFace);
+cardFace.appendChild(cardInner);
+stage.appendChild(cardFace);
+
+
+      const ratingArea = document.createElement("div");
+      ratingArea.className = "flashcard-rating";
+      ratingArea.hidden = true;
+
+      const ratingTitle = document.createElement("p");
+      ratingTitle.className = "flashcard-rating-title";
+      ratingTitle.textContent = "How well did you remember?";
+
+      const ratingActions = document.createElement("div");
+      ratingActions.className = "flashcard-rating-actions";
+
+      const practiceButton = document.createElement("button");
+      practiceButton.type = "button";
+      practiceButton.className = "flashcard-rate-button needs-practice";
+      practiceButton.textContent = "↻ Need Practice";
+
+      const knowButton = document.createElement("button");
+      knowButton.type = "button";
+      knowButton.className = "flashcard-rate-button know-it";
+      knowButton.textContent = "✓ Know It";
+
+      ratingActions.append(practiceButton, knowButton);
+      ratingArea.append(ratingTitle, ratingActions);
+
+      const navigation = document.createElement("div");
+      navigation.className = "flashcard-navigation";
+
+      const previousButton = document.createElement("button");
+      previousButton.type = "button";
+      previousButton.className = "flashcard-nav-button";
+      previousButton.textContent = "← Previous";
+
+      const shuffleButton = document.createElement("button");
+      shuffleButton.type = "button";
+      shuffleButton.className = "flashcard-nav-button flashcard-shuffle";
+      shuffleButton.textContent = "⇄ Shuffle";
+
+      const nextButton = document.createElement("button");
+      nextButton.type = "button";
+      nextButton.className = "flashcard-nav-button";
+      nextButton.textContent = "Next →";
+
+      navigation.append(previousButton, shuffleButton, nextButton);
+
+      const summary = document.createElement("div");
+      summary.className = "flashcard-session-summary";
+
+      session.append(
+        topBar,
+        progressTrack,
+        stage,
+        ratingArea,
+        navigation,
+        summary
+      );
+
+      content.appendChild(session);
+
+
+function updateFlashcard() {
+  const card = cards[currentIndex];
+
+  isFlipped = false;
+  stage.classList.remove("is-flipped");
+  ratingArea.hidden = true;
+
+  frontText.textContent = card.question;
+  backText.textContent = card.answer;
+
+  cardFace.setAttribute("aria-label", "Reveal flashcard answer");
+
+  counter.textContent = `${currentIndex + 1} / ${cards.length}`;
+
+  progressFill.style.width =
+    `${((currentIndex + 1) / cards.length) * 100}%`;
+
+  previousButton.disabled = currentIndex === 0;
+  nextButton.disabled = currentIndex === cards.length - 1;
+
+  const known = cards.filter(item => item.status === "known").length;
+  const practice = cards.filter(item => item.status === "practice").length;
+
+  summary.textContent =
+    `✓ ${known} remembered   ·   ↻ ${practice} to practice`;
+}
+
+
+
+function flipFlashcard() {
+  isFlipped = !isFlipped;
+
+  stage.classList.toggle("is-flipped", isFlipped);
+
+  cardFace.setAttribute(
+    "aria-label",
+    isFlipped ? "Show question" : "Reveal answer"
+  );
+
+  ratingArea.hidden = !isFlipped;
+}
+
+
+
+      function markCard(status) {
+        cards[currentIndex].status = status;
+
+        if (currentIndex < cards.length - 1) {
+          currentIndex++;
+          updateFlashcard();
+        } else {
+          updateFlashcard();
+          summary.textContent =
+            `Session complete · ${cards.filter(item => item.status === "known").length} remembered · ${cards.filter(item => item.status === "practice").length} to practice`;
+        }
+      }
+
+      cardFace.addEventListener("click", flipFlashcard);
+
+      previousButton.addEventListener("click", () => {
+        if (currentIndex > 0) {
+          currentIndex--;
+          updateFlashcard();
+        }
+      });
+
+      nextButton.addEventListener("click", () => {
+        if (currentIndex < cards.length - 1) {
+          currentIndex++;
+          updateFlashcard();
+        }
+      });
+
+      practiceButton.addEventListener("click", () => markCard("practice"));
+      knowButton.addEventListener("click", () => markCard("known"));
+
+      shuffleButton.addEventListener("click", () => {
+        for (let i = cards.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [cards[i], cards[j]] = [cards[j], cards[i]];
+        }
+
+        currentIndex = 0;
+        updateFlashcard();
+      });
+
+      updateFlashcard();
+    }
+
+  } else {
+    content.textContent = JSON.stringify(result, null, 2);
+    content.style.whiteSpace = "pre-wrap";
+  }
+
+  const regenerateButton = document.createElement("button");
+  regenerateButton.type = "button";
+  regenerateButton.className = "smallbtn study-tool-button";
+  regenerateButton.textContent = "Regenerate";
+  regenerateButton.addEventListener("click", () => {
+    generateStudyToolResource(documentId, resource, true);
+  });
+
+  container.append(label, heading, content, regenerateButton);
+  studyToolsResult.replaceChildren(container);
+}
+
+async function generateStudyToolResource(documentId, resource, regenerate = false) {
+  if (!documentId || !resource) return;
+
+  if (
+    !sessionStorage.getItem("accessToken") ||
+    !sessionStorage.getItem("user")
+  ) {
+    showToast("Please log in to use Study Tools.");
+    return;
+  }
+
+  const previousContent = studyToolsResult?.cloneNode(true);
+  const buttons = [...studyToolButtons];
+
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
+
+  if (studyToolsResult) {
+    const loading = document.createElement("div");
+    loading.className = "study-tools-output";
+
+    const message = document.createElement("p");
+    message.textContent = regenerate
+      ? "Regenerating your study material..."
+      : "Loading saved material or generating a new resource...";
+
+    loading.appendChild(message);
+    studyToolsResult.replaceChildren(loading);
+  }
+
+  try {
+    const response = await apiRequest(
+      `/api/v1/documents/${encodeURIComponent(documentId)}/study-tools/${resource}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ regenerate }),
+      }
+    );
+
+    const payload = response.data;
+
+    if (!payload || payload.result == null) {
+      throw new Error("The server returned an empty study resource.");
+    }
+
+    renderStudyToolResult(
+      resource,
+      payload.result,
+      Boolean(payload.cached),
+      documentId
+    );
+
+    // Automatically scroll to the generated result.
+    requestAnimationFrame(() => {
+      studyToolsResult?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
+
+  } catch (error) {
+    console.error("Study Tool request failed:", error);
+
+    if (studyToolsResult) {
+      const errorContainer = document.createElement("div");
+      errorContainer.className = "study-tools-output";
+
+      const errorHeading = document.createElement("h3");
+      errorHeading.textContent = "Unable to load study material";
+
+      const errorMessage = document.createElement("p");
+      errorMessage.setAttribute("role", "alert");
+      errorMessage.textContent =
+        error.message || "Unable to generate this resource. Please try again.";
+
+      errorContainer.append(errorHeading, errorMessage);
+      studyToolsResult.replaceChildren(errorContainer);
+    } else {
+      showToast(error.message || "Unable to generate this resource.");
+    }
+  } finally {
+    buttons.forEach((button) => {
+      button.disabled = false;
+    });
+  }
+}
+
 
 
 
@@ -1484,8 +2079,28 @@ function updateHomeAuthState() {
       console.error("Logout error:", error);
     } finally {
       sessionStorage.removeItem("accessToken");
-      sessionStorage.removeItem("user");
-      updateHomeAuthState();
+sessionStorage.removeItem("user");
+sessionStorage.removeItem("currentPage");
+
+// Clear private Study Tools documents after logout.
+state.studyToolDocuments = [];
+
+renderStudyToolsDocumentOptions();
+
+// Reset the Study Tools workspace.
+if (studyToolsResult) {
+  studyToolsResult.innerHTML = `
+    <div class="study-tools-result-icon" aria-hidden="true">✦</div>
+    <div>
+      <span class="study-tools-label">YOUR WORKSPACE</span>
+      <h3>Choose a document</h3>
+      <p>Sign in and select an uploaded document to get started.</p>
+    </div>
+  `;
+}
+
+updateHomeAuthState();
+gotoPage("home");
 
       if (authNavLink) {
         authNavLink.textContent = "Login";

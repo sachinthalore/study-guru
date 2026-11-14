@@ -9,6 +9,7 @@ import {
 } from "../services/document.service.js";
 
 import { reprocessDocumentAI } from "../services/ai/reprocess.service.js";
+import { generateStudyTool } from "../services/ai/study-tool.service.js";
 
 export const uploadDocumentController = asyncHandler(async (req, res) => {
   const document = await uploadDocument(
@@ -101,6 +102,34 @@ export const reprocessDocumentAIController = asyncHandler(
         true,
         message,
         document
+      )
+    );
+  }
+);
+
+export const generateStudyToolController = asyncHandler(
+  async (req, res) => {
+    const { resource } = req.params;
+    const regenerate = req.validatedData.regenerate;
+
+    const result = await generateStudyTool(
+      req.params.id,
+      req.user._id,
+      resource,
+      regenerate
+    );
+
+    res.status(200).json(
+      new ApiResponse(
+        true,
+        result.cached
+          ? "Saved study resource fetched successfully."
+          : "Study resource generated successfully.",
+        {
+          resource: result.resource,
+          result: result.result,
+          cached: result.cached,
+        }
       )
     );
   }

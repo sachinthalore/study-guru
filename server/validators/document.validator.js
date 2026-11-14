@@ -86,3 +86,40 @@ export const validateUploadDocument = (req, res, next) => {
 
   next();
 };
+
+// Study Tool Generation Validation
+
+const studyToolSchema = z.object({
+  regenerate: z.boolean().optional().default(false),
+});
+
+const allowedStudyTools = [
+  "summary",
+  "notes",
+  "quiz",
+  "flashcards",
+  "mindMap",
+];
+
+export const validateStudyToolRequest = (req, res, next) => {
+  if (!allowedStudyTools.includes(req.params.resource)) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Invalid study tool. Choose summary, notes, quiz, flashcards, or mindMap.",
+    });
+  }
+
+  const result = studyToolSchema.safeParse(req.body ?? {});
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      errors: result.error.flatten().fieldErrors,
+    });
+  }
+
+  req.validatedData = result.data;
+
+  next();
+};

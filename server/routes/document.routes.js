@@ -6,6 +6,7 @@ import {
   validateUploadDocument,
   validateUpdateDocument,
   validateDocumentId,
+  validateStudyToolRequest,
 } from "../validators/document.validator.js";
 import {
   uploadDocumentController,
@@ -14,6 +15,7 @@ import {
   updateDocumentController,
   deleteDocumentController,
   reprocessDocumentAIController,
+  generateStudyToolController,
 } from "../controllers/document.controller.js";
 import { validateUploadedFileContent } from "../middleware/file-security.middleware.js";
 
@@ -51,6 +53,14 @@ router.delete(
   authenticate,
   validateDocumentId,
   deleteDocumentController
+);
+
+router.post(
+  "/:id/study-tools/:resource",
+  authenticate,
+  validateDocumentId,
+  validateStudyToolRequest,
+  generateStudyToolController
 );
 
 router.post(

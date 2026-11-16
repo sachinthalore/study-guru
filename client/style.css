@@ -3858,3 +3858,119 @@
     letter-spacing: 1.5px;
   }
 }
+
+/* Login Required Modal */
+.login-required-overlay[hidden] {
+  display: none !important;
+}
+
+.login-required-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.login-required-modal {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: 36px 28px 28px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+  animation: loginModalEnter 0.2s ease-out;
+}
+
+.login-required-close {
+  position: absolute;
+  top: 12px;
+  right: 15px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 27px;
+  cursor: pointer;
+}
+
+.login-required-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+  border-radius: 18px;
+  background: #f0edff;
+  font-size: 27px;
+}
+
+.login-required-modal h2 {
+  margin: 0 0 10px;
+  color: #172033;
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.login-required-modal p {
+  margin: 0 0 25px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.login-required-submit,
+.login-required-cancel {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-required-submit {
+  border: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #635bdb, #5145cd);
+}
+
+.login-required-submit:hover {
+  filter: brightness(1.08);
+}
+
+.login-required-cancel {
+  margin-top: 10px;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  background: #ffffff;
+}
+
+.login-required-cancel:hover {
+  background: #f8fafc;
+}
+
+@keyframes loginModalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .login-required-modal {
+    padding: 32px 22px 24px;
+  }
+}
+

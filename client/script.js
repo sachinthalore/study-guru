@@ -45,6 +45,55 @@ const App = (function(){
   // DOM
   const continueStudyBtn = document.getElementById('continueStudyBtn');
   const homeLoginCard = document.getElementById('homeLoginCard');
+  // Login Required Modal
+const loginRequiredModal = document.getElementById("loginRequiredModal");
+const loginRequiredBtn = document.getElementById("loginRequiredBtn");
+const loginRequiredCancel = document.getElementById("loginRequiredCancel");
+const loginRequiredClose = document.getElementById("loginRequiredClose");
+
+function closeLoginRequiredModal() {
+  if (loginRequiredModal) {
+    loginRequiredModal.hidden = true;
+  }
+}
+function showLoginRequiredModal() {
+  if (loginRequiredModal) {
+    loginRequiredModal.hidden = false;
+  }
+}
+
+if (loginRequiredBtn) {
+  loginRequiredBtn.addEventListener("click", () => {
+    closeLoginRequiredModal();
+
+    gotoPage("home");
+
+    registerState.style.display = "none";
+    loggedOutState.style.display = "block";
+
+    homeLoginCard?.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+    setTimeout(() => loginEmail?.focus(), 300);
+  });
+}
+
+loginRequiredCancel?.addEventListener("click", closeLoginRequiredModal);
+loginRequiredClose?.addEventListener("click", closeLoginRequiredModal);
+
+loginRequiredModal?.addEventListener("click", (event) => {
+  if (event.target === loginRequiredModal) {
+    closeLoginRequiredModal();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && loginRequiredModal && !loginRequiredModal.hidden) {
+    closeLoginRequiredModal();
+  }
+});
   const loginEmail = document.getElementById('loginEmail');
   const loginPassword = document.getElementById('loginPassword');
   const passwordToggle = document.getElementById("passwordToggle");
@@ -84,6 +133,7 @@ const App = (function(){
   const genTest = document.getElementById('genTest');
   const testArea = document.getElementById('testArea');
   const profileSubjects = document.getElementById('profileSubjects');
+  
     // Study Tools
     const studyToolsDocumentSelect = document.getElementById(
       "studyToolsDocumentSelect"
@@ -437,7 +487,7 @@ function openFilePicker() {
   );
 
   if (!isLoggedIn) {
-    showToast("Please log in before uploading a document.");
+    showLoginRequiredModal();
     return;
   }
 
@@ -489,7 +539,7 @@ fileInput.onchange = (e) => {
         !sessionStorage.getItem("accessToken") ||
         !sessionStorage.getItem("user")
       ) {
-        showToast("Please log in to create a folder.");
+        showLoginRequiredModal();
         return;
       }
     
@@ -526,7 +576,7 @@ manageSubjectsBtn.onclick = async () => {
     !sessionStorage.getItem("accessToken") ||
     !sessionStorage.getItem("user")
   ) {
-    showToast("Please log in to manage folders.");
+    showLoginRequiredModal();
     return;
   }
 
@@ -661,8 +711,33 @@ manageSubjectsBtn.onclick = async () => {
     });
 
     // Send chat
-    sendBtn.onclick = sendChat;
-    chatInput.addEventListener('keydown', (e) => { if(e.key==='Enter') sendChat(); });
+function handleChatSend() {
+  const isLoggedIn = Boolean(
+    sessionStorage.getItem("accessToken") &&
+    sessionStorage.getItem("user")
+  );
+
+  if (!isLoggedIn) {
+    const loginModal = document.getElementById("loginRequiredModal");
+  
+    if (loginModal) {
+      loginModal.hidden = false;
+    }
+  
+    return;
+  }
+
+  sendChat();
+}
+
+sendBtn.onclick = handleChatSend;
+
+chatInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleChatSend();
+  }
+});
 
     // Test options
     testMode.addEventListener('change', () => {
@@ -736,7 +811,7 @@ manageSubjectsBtn.onclick = async () => {
         );
 
         if (!isLoggedIn) {
-          showToast("Please log in to use Study Tools.");
+          showLoginRequiredModal();
           return;
         }
 
@@ -776,7 +851,7 @@ async function handleFile(file) {
 activeUploadController = uploadController;
 
   if (!token) {
-    showToast("Please log in before uploading a document.");
+    showLoginRequiredModal();
     return;
   }
 
@@ -1108,7 +1183,7 @@ function renderNotesList() {
     deleteBtn.textContent = "Delete";
     deleteBtn.addEventListener("click", async () => {
       if (!sessionStorage.getItem("accessToken")) {
-        showToast("Please log in to delete documents.");
+        showLoginRequiredModal();
         return;
       }
     
@@ -1640,7 +1715,7 @@ async function generateStudyToolResource(documentId, resource, regenerate = fals
     !sessionStorage.getItem("accessToken") ||
     !sessionStorage.getItem("user")
   ) {
-    showToast("Please log in to use Study Tools.");
+    showLoginRequiredModal();
     return;
   }
 

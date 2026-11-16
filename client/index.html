@@ -967,6 +967,37 @@ hidden
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
 
 <!-- Study Guru application -->
+
+<!-- LOGIN REQUIRED MODAL -->
+<div id="loginRequiredModal" class="login-required-overlay" hidden>
+  <div
+    class="login-required-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="loginRequiredTitle"
+  >
+    <button
+      type="button"
+      class="login-required-close"
+      id="loginRequiredClose"
+      aria-label="Close"
+    >&times;</button>
+
+    <div class="login-required-icon">🔒</div>
+
+    <h2 id="loginRequiredTitle">Login Required</h2>
+
+    <p>Please log in to continue using Study Guru AI.</p>
+
+    <button type="button" id="loginRequiredBtn" class="login-required-submit">
+      Login Now
+    </button>
+
+    <button type="button" id="loginRequiredCancel" class="login-required-cancel">
+      Cancel
+    </button>
+  </div>
+</div>
 <script src="script.js"></script>
 </body>
 </html>

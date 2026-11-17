@@ -140,6 +140,8 @@ document.addEventListener("keydown", (event) => {
     );
 
     const studyToolsResult = document.getElementById("studyToolsResult");
+    let studyToolsRequestPending = false;
+let studyToolsScrollPending = false;
 
     const studyToolButtons = document.querySelectorAll(
       "[data-study-tool]"
@@ -285,6 +287,15 @@ gotoPage(savedPage);
   }
 
   function gotoPage(page) {
+    const previousPage = sessionStorage.getItem("currentPage");
+
+if (
+  previousPage === "study-tools" &&
+  page !== "study-tools" &&
+  studyToolsRequestPending
+) {
+  studyToolsScrollPending = true;
+}
     sessionStorage.setItem("currentPage", page);
 
 
@@ -302,6 +313,12 @@ gotoPage(savedPage);
     if (el) {
       el.classList.remove("hide");
     }
+    // Scroll to Study Tools content when returning to the page.
+if (page === "study-tools" && studyToolsScrollPending) {
+  studyToolsScrollPending = false;
+
+  scrollToStudyToolsResult();
+}
 
 
 
@@ -1707,6 +1724,31 @@ function flipFlashcard() {
   container.append(label, heading, content, regenerateButton);
   studyToolsResult.replaceChildren(container);
 }
+function scrollToStudyToolsResult() {
+  if (!studyToolsResult) return;
+
+  // Double requestAnimationFrame ensure karta hai ki DOM ki height aur layout 
+  // fully calculate ho chuke hain, jisse bina kisi jhatke ke smooth scroll ho.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const targetPosition =
+        studyToolsResult.getBoundingClientRect().top +
+        window.scrollY -
+        24;
+
+      const maxScroll =
+        document.documentElement.scrollHeight - window.innerHeight;
+
+      window.scrollTo({
+        top: Math.min(
+          Math.max(0, targetPosition),
+          maxScroll
+        ),
+        behavior: "smooth"
+      });
+    });
+  });
+}
 
 async function generateStudyToolResource(documentId, resource, regenerate = false) {
   if (!documentId || !resource) return;
@@ -1719,8 +1761,8 @@ async function generateStudyToolResource(documentId, resource, regenerate = fals
     return;
   }
 
-  const previousContent = studyToolsResult?.cloneNode(true);
   const buttons = [...studyToolButtons];
+  studyToolsRequestPending = true;
 
   buttons.forEach((button) => {
     button.disabled = true;
@@ -1735,8 +1777,15 @@ async function generateStudyToolResource(documentId, resource, regenerate = fals
       ? "Regenerating your study material..."
       : "Loading saved material or generating a new resource...";
 
-    loading.appendChild(message);
-    studyToolsResult.replaceChildren(loading);
+      loading.appendChild(message);
+      studyToolsResult.replaceChildren(loading);
+      
+      // Scroll to loading message when Study Tools is currently visible.
+      if (sessionStorage.getItem("currentPage") === "study-tools") {
+        scrollToStudyToolsResult();
+      } else {
+        studyToolsScrollPending = true;
+      }
   }
 
   try {
@@ -1761,13 +1810,12 @@ async function generateStudyToolResource(documentId, resource, regenerate = fals
       documentId
     );
 
-    // Automatically scroll to the generated result.
-    requestAnimationFrame(() => {
-      studyToolsResult?.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-    });
+    // Scroll sirf tabhi hoga jab final content successfully render ho chuka ho.
+    if (sessionStorage.getItem("currentPage") === "study-tools") {
+      scrollToStudyToolsResult();
+    } else {
+      studyToolsScrollPending = true;
+    }
 
   } catch (error) {
     console.error("Study Tool request failed:", error);
@@ -1786,16 +1834,23 @@ async function generateStudyToolResource(documentId, resource, regenerate = fals
 
       errorContainer.append(errorHeading, errorMessage);
       studyToolsResult.replaceChildren(errorContainer);
+
+      if (sessionStorage.getItem("currentPage") === "study-tools") {
+        scrollToStudyToolsResult();
+      } else {
+        studyToolsScrollPending = true;
+      }
     } else {
       showToast(error.message || "Unable to generate this resource.");
     }
   } finally {
+    studyToolsRequestPending = false;
+
     buttons.forEach((button) => {
       button.disabled = false;
     });
   }
 }
-
 
 
 
